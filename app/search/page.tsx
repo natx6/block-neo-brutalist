@@ -4,22 +4,37 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { BottomNav, Icon, MiniPlayer, TopBar } from "../components/Nav";
 import { fmtTime } from "../../lib/catalog";
 import { listTracks, type SavedTrack } from "../../lib/db";
-import { loadSettings, saveFileTracks, saveUrlTrack } from "../../lib/downloads";
+import {
+  loadSettings,
+  saveAudiusTrack,
+  saveFileTracks,
+  saveUrlTrack,
+} from "../../lib/downloads";
+import { audiusStreamUrl, searchAudius, type OnlineResult } from "../../lib/audius";
 import { usePlayer } from "../../lib/player-context";
 
 export default function SearchPage() {
-  const { current, playing, play } = usePlayer();
+  const { current, playing, play, preview } = usePlayer();
   const [query, setQuery] = useState("");
+  const [debounced, setDebounced] = useState("");
   const [saved, setSaved] = useState<SavedTrack[]>([]);
+  const [savedIds, setSavedIds] = useState<Set<string>>(new Set());
+  const [online, setOnline] = useState<OnlineResult[]>([]);
+  const [searching, setSearching] = useState(false);
+  const [searchError, setSearchError] = useState("");
+  const [dlProg, setDlProg] = useState<Record<string, number>>({});
   const [url, setUrl] = useState("");
   const [downloading, setDownloading] = useState(false);
   const [dlPct, setDlPct] = useState(0);
-  const [error, setError] = useState("");
+  const [urlError, setUrlError] = useState("");
+  const [importStatus, setImportStatus] = useState("");
   const fileRef = useRef<HTMLInputElement>(null);
 
   const refresh = useCallback(async () => {
     try {
-      setSaved(await listTracks());
+      const tracks = await listTracks();
+      setSaved(tracks);
+      setSavedIds(new Set(tracks.map((t) => t.id)));
     } catch {}
   }, []);
 
@@ -27,21 +42,49 @@ export default function SearchPage() {
     refresh();
   }, [refresh]);
 
-  const q = query.trim().toLowerCase();
-  const filtered = q
-    ? saved.filter(
-        (t) => t.title.toLowerCase().includes(q) || t.artist.toLowerCase().includes(q)
-      )
-    : saved;
+  useEffect(() => {
+    const t = setTimeout(() => setDebounced(query.trim()), 600);
+    return () => clearTimeout(t);
+  }, [query]);
+
+  useEffect(() => {
+    let cancelled = false;
+    if (!debounced) {
+      setOnline([]);
+      setSearching(false);
+      setSearchError("");
+      return;
+    }
+    setSearching(true);
+    setSearchError("");
+    searchAudius(debounced, 15)
+      .then((res) => {
+        if (!cancelled) setOnline(res);
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setOnline([]);
+          setSearchError("Search failed — check connection.");
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setSearching(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [debounced]);
 
   const handleFiles = async (files: FileList | null) => {
     if (!files || files.length === 0) return;
-    setError("");
+    const count = files.length;
+    setImportStatus("Importing...");
     try {
       await saveFileTracks(files, loadSettings().quality);
+      setImportStatus(`Saved ${count} song(s)`);
       await refresh();
-    } catch {
-      setError("Could not import those files.");
+    } catch (err) {
+      setImportStatus(err instanceof Error ? err.message : "Import failed");
     }
     if (fileRef.current) fileRef.current.value = "";
   };
@@ -49,7 +92,7 @@ export default function SearchPage() {
   const handleUrl = async () => {
     const u = url.trim();
     if (!u || downloading) return;
-    setError("");
+    setUrlError("");
     setDownloading(true);
     setDlPct(0);
     try {
@@ -57,12 +100,30 @@ export default function SearchPage() {
       setUrl("");
       await refresh();
     } catch {
-      setError("That link did not return audio.");
+      setUrlError("That link did not return audio.");
     } finally {
       setDownloading(false);
       setDlPct(0);
     }
   };
+
+  const handleSaveAudius = async (r: OnlineResult) => {
+    const key = r.sourceId;
+    setDlProg((prev) => ({ ...prev, [key]: 0 }));
+    try {
+      await saveAudiusTrack(r, loadSettings().quality, (p) =>
+        setDlProg((prev) => ({ ...prev, [key]: p }))
+      );
+      await refresh();
+    } catch {}
+    setDlProg((prev) => {
+      const next = { ...prev };
+      delete next[key];
+      return next;
+    });
+  };
+
+  const showingOnline = debounced.length > 0;
 
   return (
     <div className="bg-[#fff7ff] min-h-dvh max-w-[430px] mx-auto flex flex-col relative">
@@ -76,7 +137,7 @@ export default function SearchPage() {
             <input
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search your stash..."
+              placeholder="Search millions of tracks..."
               aria-label="Search tracks"
               className="flex-1 bg-transparent font-display font-semibold text-[16px] focus:outline-none min-w-0"
             />
@@ -88,18 +149,25 @@ export default function SearchPage() {
 
         <div className="w-full bg-white p-4 rounded-2xl clay-card flex flex-col gap-3">
           <p className="font-display font-bold text-[16px]">Add music</p>
-          <label className="h-12 rounded-full bg-[#64568a] text-white font-display font-bold text-[14px] clay-button-active flex items-center justify-center gap-1.5 cursor-pointer min-h-[48px]">
+          <button
+            type="button"
+            onClick={() => fileRef.current?.click()}
+            className="h-12 rounded-full bg-[#64568a] text-white font-display font-bold text-[14px] clay-button-active flex items-center justify-center gap-1.5 min-h-[48px]"
+          >
             <Icon name="upload" className="text-[20px]" />
             Import from device
-            <input
-              ref={fileRef}
-              type="file"
-              accept="audio/*"
-              multiple
-              className="hidden"
-              onChange={(e) => handleFiles(e.target.files)}
-            />
-          </label>
+          </button>
+          <input
+            ref={fileRef}
+            type="file"
+            accept="audio/*"
+            multiple
+            className="hidden"
+            onChange={(e) => handleFiles(e.target.files)}
+          />
+          {importStatus && (
+            <p className="text-[12px] font-bold text-[#49454e]">{importStatus}</p>
+          )}
           <div className="flex gap-2">
             <input
               value={url}
@@ -148,52 +216,172 @@ export default function SearchPage() {
               <p className="text-[12px] font-bold">Downloading...</p>
             </div>
           )}
-          {error && <p className="text-[12px] font-bold text-[#944652]">{error}</p>}
+          {urlError && <p className="text-[12px] font-bold text-[#944652]">{urlError}</p>}
+          <p className="text-[11px] font-medium text-[#49454e]">
+            Tip: use DRM-free audio from the Files app — Apple Music streams cannot be imported.
+          </p>
         </div>
 
-        <div className="flex items-center justify-between px-1">
-          <div className="flex items-center gap-2">
-            <span className="font-display font-bold text-[18px]">Results</span>
-            <span className="font-display font-bold text-[12px] bg-[#e9ddff] px-2.5 py-0.5 rounded-full clay-thumb">{filtered.length} saved</span>
-          </div>
-          <span className="text-[11px] font-bold text-[#49454e]">Tap to play</span>
-        </div>
-
-        {saved.length === 0 ? (
-          <div className="w-full bg-white p-6 rounded-2xl clay-card flex flex-col items-center text-center">
-            <div className="w-14 h-14 rounded-full bg-[#d5c4ff] clay-thumb flex items-center justify-center text-[#4c3f70] mb-2">
-              <Icon name="cloud" fill className="text-[28px]" />
+        {showingOnline ? (
+          <>
+            <div className="flex items-center justify-between px-1">
+              <div className="flex items-center gap-2">
+                <span className="font-display font-bold text-[18px]">Online</span>
+                <span className="font-display font-bold text-[12px] bg-[#e9ddff] px-2.5 py-0.5 rounded-full clay-thumb">
+                  {online.length}
+                </span>
+              </div>
+              <span className="text-[11px] font-bold text-[#49454e]">Tap to preview</span>
             </div>
-            <h3 className="font-display font-bold text-[22px]">Nothing here yet</h3>
-            <p className="text-[14px] text-[#49454e] max-w-[280px]">Import audio files and they will appear here, offline forever.</p>
-          </div>
-        ) : filtered.length === 0 ? (
-          <div className="w-full bg-white p-6 rounded-2xl clay-card flex flex-col items-center text-center">
-            <p className="font-display font-bold text-[18px]">No matches</p>
-            <p className="text-[13px] text-[#49454e]">Try a different title or artist.</p>
-          </div>
+
+            {searching ? (
+              <div className="w-full bg-white p-6 rounded-2xl clay-card flex flex-col items-center text-center gap-3">
+                <div className="flex items-center gap-2">
+                  <span className="w-3.5 h-3.5 rounded-full bg-[#d5c4ff] animate-bounce" />
+                  <span className="w-3.5 h-3.5 rounded-full bg-[#a6d7fe] animate-bounce [animation-delay:150ms]" />
+                  <span className="w-3.5 h-3.5 rounded-full bg-[#ffc7d1] animate-bounce [animation-delay:300ms]" />
+                </div>
+                <p className="text-[13px] font-bold text-[#49454e]">Searching the clouds...</p>
+              </div>
+            ) : searchError ? (
+              <div className="w-full bg-white p-6 rounded-2xl clay-card flex flex-col items-center text-center">
+                <p className="text-[13px] font-bold text-[#944652]">{searchError}</p>
+              </div>
+            ) : online.length === 0 ? (
+              <div className="w-full bg-white p-6 rounded-2xl clay-card flex flex-col items-center text-center">
+                <p className="font-display font-bold text-[18px]">No matches</p>
+                <p className="text-[13px] text-[#49454e]">Try a different title or artist.</p>
+              </div>
+            ) : (
+              <div className="flex flex-col gap-3">
+                {online.map((r) => {
+                  const savedKey = `audius-${r.sourceId}`;
+                  const isSaved = savedIds.has(savedKey);
+                  const prog = dlProg[r.sourceId];
+                  const isDownloading = prog !== undefined;
+                  return (
+                    <div
+                      key={r.sourceId}
+                      onClick={() =>
+                        preview(
+                          {
+                            id: savedKey,
+                            title: r.title,
+                            artist: r.artist,
+                            durationSec: r.durationSec,
+                            icon: "music_note",
+                            bg: "#E9DCFF",
+                            artwork: r.artwork,
+                          },
+                          audiusStreamUrl(r.sourceId)
+                        )
+                      }
+                      className="w-full bg-white p-3 rounded-2xl clay-card flex items-center justify-between gap-2 text-left cursor-pointer"
+                    >
+                      <div className="flex items-center gap-3 min-w-0 flex-1">
+                        {r.artwork ? (
+                          <img
+                            src={r.artwork}
+                            alt=""
+                            width={56}
+                            height={56}
+                            className="w-14 h-14 rounded-2xl object-cover clay-thumb shrink-0"
+                          />
+                        ) : (
+                          <div className="w-14 h-14 rounded-2xl clay-thumb flex items-center justify-center shrink-0" style={{ background: "#E9DCFF" }}>
+                            <Icon name="music_note" className="text-[28px]" />
+                          </div>
+                        )}
+                        <div className="min-w-0 flex-1">
+                          <p className="font-display font-bold text-[16px] truncate">{r.title}</p>
+                          <p className="text-[12px] text-[#49454e] truncate">
+                            {r.artist} • {fmtTime(r.durationSec)}
+                          </p>
+                        </div>
+                      </div>
+                      {isSaved ? (
+                        <span aria-label="Saved" className="w-11 h-11 rounded-full bg-[#c7f5dc] clay-thumb flex items-center justify-center shrink-0 text-[#144d32]">
+                          <Icon name="check" />
+                        </span>
+                      ) : isDownloading ? (
+                        <span className="relative w-11 h-11 rounded-full bg-[#f6e9ff] clay-thumb flex items-center justify-center shrink-0">
+                          <svg className="w-11 h-11 -rotate-90" viewBox="0 0 44 44">
+                            <circle cx="22" cy="22" r="17" stroke="#eedbff" strokeWidth="4" fill="none" />
+                            <circle
+                              cx="22"
+                              cy="22"
+                              r="17"
+                              stroke="#306385"
+                              strokeWidth="4"
+                              fill="none"
+                              strokeDasharray="106.8"
+                              strokeDashoffset={106.8 * (1 - prog / 100)}
+                              strokeLinecap="round"
+                            />
+                          </svg>
+                          <span className="absolute text-[10px] font-bold">{prog}%</span>
+                        </span>
+                      ) : (
+                        <button
+                          type="button"
+                          aria-label={`Download ${r.title}`}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleSaveAudius(r);
+                          }}
+                          className="w-11 h-11 rounded-full bg-[#d5c4ff] clay-thumb flex items-center justify-center shrink-0 text-[#231534]"
+                        >
+                          <Icon name="download" />
+                        </button>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </>
         ) : (
-          <div className="flex flex-col gap-3">
-            {filtered.map((t) => {
-              const isCurrent = current?.id === t.id && playing;
-              return (
-                <button key={t.id} onClick={() => play(t.id)} className="w-full bg-white p-3 rounded-2xl clay-card flex items-center justify-between gap-2 text-left">
-                  <div className="flex items-center gap-3 min-w-0 flex-1">
-                    <div className="w-14 h-14 rounded-2xl clay-thumb flex items-center justify-center shrink-0" style={{ background: t.bg }}>
-                      <Icon name={t.icon} className="text-[28px]" />
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <p className="font-display font-bold text-[16px] truncate">{t.title}</p>
-                      <p className="text-[12px] text-[#49454e] truncate">{t.artist} • {fmtTime(t.durationSec)}</p>
-                    </div>
-                  </div>
-                  <span className="w-11 h-11 rounded-full bg-[#d5c4ff] clay-thumb flex items-center justify-center shrink-0 text-[#231534]">
-                    <Icon name={isCurrent ? "pause" : "play_arrow"} fill />
-                  </span>
-                </button>
-              );
-            })}
-          </div>
+          <>
+            <div className="flex items-center justify-between px-1">
+              <div className="flex items-center gap-2">
+                <span className="font-display font-bold text-[18px]">Your stash</span>
+                <span className="font-display font-bold text-[12px] bg-[#e9ddff] px-2.5 py-0.5 rounded-full clay-thumb">{saved.length} saved</span>
+              </div>
+              <span className="text-[11px] font-bold text-[#49454e]">Tap to play</span>
+            </div>
+
+            {saved.length === 0 ? (
+              <div className="w-full bg-white p-6 rounded-2xl clay-card flex flex-col items-center text-center">
+                <div className="w-14 h-14 rounded-full bg-[#d5c4ff] clay-thumb flex items-center justify-center text-[#4c3f70] mb-2">
+                  <Icon name="cloud" fill className="text-[28px]" />
+                </div>
+                <h3 className="font-display font-bold text-[22px]">Nothing here yet</h3>
+                <p className="text-[14px] text-[#49454e] max-w-[280px]">Import audio files and they will appear here, offline forever.</p>
+              </div>
+            ) : (
+              <div className="flex flex-col gap-3">
+                {saved.map((t) => {
+                  const isCurrent = current?.id === t.id && playing;
+                  return (
+                    <button key={t.id} onClick={() => play(t.id)} className="w-full bg-white p-3 rounded-2xl clay-card flex items-center justify-between gap-2 text-left">
+                      <div className="flex items-center gap-3 min-w-0 flex-1">
+                        <div className="w-14 h-14 rounded-2xl clay-thumb flex items-center justify-center shrink-0" style={{ background: t.bg }}>
+                          <Icon name={t.icon} className="text-[28px]" />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="font-display font-bold text-[16px] truncate">{t.title}</p>
+                          <p className="text-[12px] text-[#49454e] truncate">{t.artist} • {fmtTime(t.durationSec)}</p>
+                        </div>
+                      </div>
+                      <span className="w-11 h-11 rounded-full bg-[#d5c4ff] clay-thumb flex items-center justify-center shrink-0 text-[#231534]">
+                        <Icon name={isCurrent ? "pause" : "play_arrow"} fill />
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </>
         )}
       </main>
       <MiniPlayer />

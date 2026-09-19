@@ -7,6 +7,9 @@ export interface SavedTrack {
   durationSec: number;
   icon: string;
   bg: string;
+  artwork?: string | null;
+  source?: string | null;
+  sourceId?: string | null;
   blob: Blob;
   mime: string;
   size: number;

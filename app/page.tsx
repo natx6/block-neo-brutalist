@@ -19,6 +19,7 @@ export default function Home() {
   const [query, setQuery] = useState("");
   const [sleepOn, setSleepOn] = useState(true);
   const [recent, setRecent] = useState<SavedTrack[]>([]);
+  const [importStatus, setImportStatus] = useState("");
   const router = useRouter();
   const fileRef = useRef<HTMLInputElement>(null);
   const { current, playing, play } = usePlayer();
@@ -50,10 +51,15 @@ export default function Home() {
 
   const handleFiles = async (files: FileList | null) => {
     if (!files || files.length === 0) return;
+    const count = files.length;
+    setImportStatus("Importing...");
     try {
       await saveFileTracks(files, loadSettings().quality);
+      setImportStatus(`Saved ${count} song(s)`);
       await refresh();
-    } catch {}
+    } catch (err) {
+      setImportStatus(err instanceof Error ? err.message : "Import failed");
+    }
     if (fileRef.current) fileRef.current.value = "";
   };
 
@@ -176,23 +182,30 @@ export default function Home() {
               </div>
             </div>
             <div className="grid grid-cols-2 gap-2 mt-3">
-              <label className="h-12 rounded-full bg-[#64568a] text-white font-display font-bold text-[14px] clay-button-active flex items-center justify-center gap-1.5 cursor-pointer min-h-[48px]">
+              <button
+                type="button"
+                onClick={() => fileRef.current?.click()}
+                className="h-12 rounded-full bg-[#64568a] text-white font-display font-bold text-[14px] clay-button-active flex items-center justify-center gap-1.5 min-h-[48px]"
+              >
                 <Icon name="upload" className="text-[20px]" />
                 From device
-                <input
-                  ref={fileRef}
-                  type="file"
-                  accept="audio/*"
-                  multiple
-                  className="hidden"
-                  onChange={(e) => handleFiles(e.target.files)}
-                />
-              </label>
+              </button>
               <Link href="/search" className="h-12 rounded-full bg-white font-display font-bold text-[14px] clay-card flex items-center justify-center gap-1.5 min-h-[48px]">
                 <Icon name="link" className="text-[20px]" />
                 Paste a link
               </Link>
             </div>
+            <input
+              ref={fileRef}
+              type="file"
+              accept="audio/*"
+              multiple
+              className="hidden"
+              onChange={(e) => handleFiles(e.target.files)}
+            />
+            {importStatus && (
+              <p className="text-[12px] font-bold text-[#49454e] mt-2">{importStatus}</p>
+            )}
           </div>
         </div>
 

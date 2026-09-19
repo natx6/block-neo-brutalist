@@ -11,6 +11,7 @@ export interface NowPlaying {
   durationSec: number;
   icon: string;
   bg: string;
+  artwork?: string | null;
 }
 
 interface PlayerState {
@@ -21,6 +22,8 @@ interface PlayerState {
   offlineMode: boolean;
   play: (id: string) => Promise<void>;
   playList: (ids: string[], startIdx?: number) => Promise<void>;
+  /** Play a remote URL without saving (search preview). */
+  preview: (meta: NowPlaying, url: string) => Promise<void>;
   toggle: () => void;
   seek: (sec: number) => void;
   next: () => void;
@@ -115,6 +118,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
       durationSec: saved.durationSec,
       icon: saved.icon,
       bg: saved.bg,
+      artwork: saved.artwork ?? null,
     });
     setDuration(saved.durationSec || 0);
     try {
@@ -148,6 +152,31 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     },
     [playId]
   );
+
+  const preview = useCallback(async (meta: NowPlaying, url: string) => {
+    if (urlRef.current) {
+      URL.revokeObjectURL(urlRef.current);
+      urlRef.current = null;
+    }
+    setCurrent(meta);
+    setDuration(meta.durationSec || 0);
+    if (audioRef.current) {
+      audioRef.current.src = url;
+      audioRef.current.currentTime = 0;
+    }
+    try {
+      await audioRef.current?.play();
+    } catch {}
+    if ("mediaSession" in navigator) {
+      try {
+        navigator.mediaSession.metadata = new MediaMetadata({
+          title: meta.title,
+          artist: meta.artist,
+          album: "Puff",
+        });
+      } catch {}
+    }
+  }, []);
 
   const toggle = useCallback(async () => {
     const a = audioRef.current;
@@ -207,13 +236,14 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
       offlineMode,
       play,
       playList,
+      preview,
       toggle,
       seek,
       next: () => step(1),
       prev: () => step(-1),
       setOfflineMode,
     }),
-    [current, playing, currentTime, duration, offlineMode, play, playList, toggle, seek, step, setOfflineMode]
+    [current, playing, currentTime, duration, offlineMode, play, playList, preview, toggle, seek, step, setOfflineMode]
   );
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
