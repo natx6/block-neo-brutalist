@@ -11,6 +11,11 @@ export const THEMES: Theme[] = [
   { id: "matcha", name: "Matcha", desc: "Calm green cream", swatches: ["#f6f7ec", "#5c7a3f", "#3f7a6b"] },
   { id: "sunset", name: "Sunset", desc: "Warm peach glow", swatches: ["#fff6f0", "#c25e3a", "#3a7d8c"] },
   { id: "ocean", name: "Ocean", desc: "Deep sea fresh", swatches: ["#f2f8ff", "#2f6db3", "#3f9a8c"] },
+  { id: "void", name: "Void", desc: "True black OLED", swatches: ["#000000", "#e8e8ec", "#7dd0ff"] },
+  { id: "espresso", name: "Espresso", desc: "Dark coffee roast", swatches: ["#1b130e", "#e0a458", "#7fb3a3"] },
+  { id: "indigo", name: "Indigo Dusk", desc: "Dark electric indigo", swatches: ["#141222", "#8f9bff", "#67e8f9"] },
+  { id: "forest", name: "Forest Night", desc: "Dark moss glow", swatches: ["#101b14", "#9be15d", "#7dd3c0"] },
+  { id: "zine", name: "Indie Zine", desc: "Photocopy paper ink", swatches: ["#f4f1e8", "#1c1a17", "#d43d2a"] },
 ];
 
 const KEY = "puff-theme";
