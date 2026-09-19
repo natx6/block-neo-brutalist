@@ -1,33 +1,55 @@
+import { Innertube } from "youtubei.js";
+
+export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
-export async function GET(req: Request) {
-  const workerBase = process.env.WORKER_URL;
-  if (!workerBase) {
-    return Response.json({ error: "no-worker" }, { status: 501 });
-  }
-  const { searchParams } = new URL(req.url);
-  const q = searchParams.get("q") ?? "";
-  const limit = searchParams.get("limit") ?? "15";
+let tubePromise: Promise<Innertube> | null = null;
 
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 30_000);
+function getTube(): Promise<Innertube> {
+  if (!tubePromise) {
+    tubePromise = Innertube.create({ generate_session_locally: true });
+  }
+  return tubePromise;
+}
+
+export async function GET(req: Request) {
+  const { searchParams } = new URL(req.url);
+  const q = (searchParams.get("q") ?? "").trim();
+  const rawLimit = Number(searchParams.get("limit") ?? "12");
+  const limit = Math.min(25, Math.max(1, Math.floor(rawLimit) || 12));
+  if (!q) return Response.json({ results: [] });
+
   try {
-    const base = workerBase.replace(/\/+$/, "");
-    const workerRes = await fetch(
-      `${base}/search?q=${encodeURIComponent(q)}&limit=${encodeURIComponent(limit)}`,
-      { signal: controller.signal }
-    );
-    if (!workerRes.ok) {
-      return Response.json({ error: "worker-failed" }, { status: 502 });
+    const yt = await getTube();
+    const search = await yt.search(q, { type: "video" });
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const items: any[] = ((search as any).results ?? []) as any[];
+    const results = [];
+    for (const v of items) {
+      if (results.length >= limit) break;
+      const nodeType = v?.type ?? v?.constructor?.name;
+      if (nodeType !== "Video") continue;
+      const id = String(v?.id ?? "");
+      if (!/^[A-Za-z0-9_-]{11}$/.test(id)) continue;
+      const title = typeof v?.title === "string" ? v.title : String(v?.title ?? "Untitled") || "Untitled";
+      const artist = String(v?.author?.name ?? "") || "";
+      const dur = v?.duration;
+      const durationSec =
+        typeof dur === "number"
+          ? dur
+          : typeof dur?.seconds === "number"
+            ? dur.seconds
+            : 0;
+      results.push({
+        videoId: id,
+        title,
+        artist,
+        durationSec,
+        artwork: `https://i.ytimg.com/vi/${id}/hqdefault.jpg`,
+      });
     }
-    const json = await workerRes.json();
-    if (!json || !Array.isArray(json.results)) {
-      return Response.json({ error: "worker-failed" }, { status: 502 });
-    }
-    return Response.json(json);
+    return Response.json({ results });
   } catch {
-    return Response.json({ error: "worker-failed" }, { status: 502 });
-  } finally {
-    clearTimeout(timer);
+    return Response.json({ error: "yt-search-failed" }, { status: 502 });
   }
 }

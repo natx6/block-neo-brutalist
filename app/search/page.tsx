@@ -15,7 +15,6 @@ import { audiusStreamUrl, searchAudius, type OnlineResult } from "../../lib/audi
 import {
   searchYouTube,
   ytPreviewUrl,
-  WorkerMissing,
   type YTResult,
 } from "../../lib/youtube";
 import { usePlayer } from "../../lib/player-context";
@@ -58,7 +57,6 @@ export default function SearchPage() {
   const [ytResults, setYtResults] = useState<YTResult[]>([]);
   const [searching, setSearching] = useState(false);
   const [searchError, setSearchError] = useState("");
-  const [ytMissing, setYtMissing] = useState(false);
   const [ytUnavailable, setYtUnavailable] = useState(false);
   const [ytImgFail, setYtImgFail] = useState<Set<string>>(new Set());
   const [dlProg, setDlProg] = useState<Record<string, number>>({});
@@ -67,6 +65,7 @@ export default function SearchPage() {
   const [dlPct, setDlPct] = useState(0);
   const [urlError, setUrlError] = useState("");
   const [importStatus, setImportStatus] = useState("");
+  const [previewingId, setPreviewingId] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
   const refresh = useCallback(async () => {
@@ -93,30 +92,21 @@ export default function SearchPage() {
       setYtResults([]);
       setSearching(false);
       setSearchError("");
-      setYtMissing(false);
       setYtUnavailable(false);
       return;
     }
     setSearching(true);
     setSearchError("");
-    setYtMissing(false);
     setYtUnavailable(false);
     Promise.allSettled([searchYouTube(debounced, 15), searchAudius(debounced, 15)]).then(
       ([yt, au]) => {
         if (cancelled) return;
         if (yt.status === "fulfilled") {
           setYtResults(yt.value);
-          setYtMissing(false);
           setYtUnavailable(false);
         } else {
-          const err = yt.reason as unknown;
-          const isMissing =
-            err instanceof WorkerMissing ||
-            (err instanceof Error &&
-              (/no-worker|501|WorkerMissing/i.test(err.message)));
           setYtResults([]);
-          setYtMissing(isMissing);
-          setYtUnavailable(!isMissing);
+          setYtUnavailable(true);
         }
         if (au.status === "fulfilled") {
           setOnline(au.value);
@@ -197,8 +187,21 @@ export default function SearchPage() {
     });
   };
 
+  const handlePreviewYouTube = async (r: YTResult) => {
+    const key = r.videoId;
+    if (previewingId) return;
+    setPreviewingId(key);
+    try {
+      const { url } = await ytPreviewUrl(r.videoId);
+      await preview(ytMeta(r), url);
+    } catch {
+      setYtUnavailable(true);
+    } finally {
+      setPreviewingId(null);
+    }
+  };
+
   const showingOnline = debounced.length > 0;
-  const ytQueue = ytResults.map((r) => ({ meta: ytMeta(r), url: ytPreviewUrl(r.videoId) }));
   const audiusQueue = online.map((r) => ({
     meta: audiusMeta(r),
     url: audiusStreamUrl(r.sourceId),
@@ -317,7 +320,7 @@ export default function SearchPage() {
                 <div className="flex items-center justify-between px-1">
                   <div className="flex items-center gap-2">
                     <span className="font-display font-bold text-[18px]">Top hits</span>
-                    {!ytMissing && !ytUnavailable && (
+                    {!ytUnavailable && (
                       <span className="font-display font-bold text-[12px] bg-[#ffe0d6] px-2.5 py-0.5 rounded-full clay-thumb">
                         {ytResults.length}
                       </span>
@@ -326,36 +329,7 @@ export default function SearchPage() {
                   <span className="text-[11px] font-bold text-[#49454e]">Tap to preview</span>
                 </div>
 
-                {ytMissing ? (
-                  <div className="w-full bg-white p-4 rounded-2xl clay-card flex flex-col gap-2">
-                    <div className="flex items-center gap-3">
-                      <div className="w-12 h-12 rounded-2xl bg-[#ffe0d6] clay-thumb flex items-center justify-center shrink-0 text-[#5c3a2a]">
-                        <Icon name="build" className="text-[24px]" />
-                      </div>
-                      <div className="min-w-0">
-                        <p className="font-display font-bold text-[16px]">All-songs unlock</p>
-                        <p className="text-[12px] font-medium text-[#49454e]">
-                          Deploy the 5-minute worker to search all of YouTube.
-                        </p>
-                      </div>
-                    </div>
-                    <details className="bg-[#fff4ee] rounded-xl px-3 py-2">
-                      <summary className="text-[12px] font-bold cursor-pointer">
-                        Setup steps
-                      </summary>
-                      <p className="text-[12px] font-medium text-[#49454e] mt-2">
-                        Run in a terminal:
-                      </p>
-                      <code className="block text-[11px] font-bold bg-white rounded-lg px-2 py-1.5 mt-1 break-all">
-                        cd block-app/worker &amp;&amp; fly auth login &amp;&amp; fly launch --no-deploy
-                        &amp;&amp; fly deploy
-                      </code>
-                      <p className="text-[12px] font-medium text-[#49454e] mt-2">
-                        Then set WORKER_URL in Vercel.
-                      </p>
-                    </details>
-                  </div>
-                ) : ytUnavailable ? (
+                {ytUnavailable ? (
                   <p className="text-[12px] font-bold text-[#49454e] px-1">
                     YouTube unavailable right now.
                   </p>
@@ -378,35 +352,47 @@ export default function SearchPage() {
                       const prog = dlProg[savedKey];
                       const isDownloading = prog !== undefined;
                       const imgFailed = ytImgFail.has(r.videoId);
+                      const isPreviewing = previewingId === r.videoId;
                       return (
                         <div
                           key={r.videoId}
-                          onClick={() =>
-                            preview(ytMeta(r), ytPreviewUrl(r.videoId), ytQueue)
-                          }
+                          onClick={() => handlePreviewYouTube(r)}
                           className="w-full bg-white p-3 rounded-2xl clay-card flex items-center justify-between gap-2 text-left cursor-pointer"
                         >
                           <div className="flex items-center gap-3 min-w-0 flex-1">
-                            {r.artwork && !imgFailed ? (
-                              <img
-                                src={r.artwork}
-                                alt=""
-                                width={56}
-                                height={56}
-                                onError={() =>
-                                  setYtImgFail((prev) => new Set(prev).add(r.videoId))
-                                }
-                                className="w-14 h-14 rounded-2xl object-cover clay-thumb shrink-0"
-                              />
-                            ) : (
-                              <div className="w-14 h-14 rounded-2xl clay-thumb flex items-center justify-center shrink-0" style={{ background: "#FFE0D6" }}>
-                                <Icon name="music_note" className="text-[28px]" />
-                              </div>
-                            )}
+                            <div className="relative shrink-0">
+                              {r.artwork && !imgFailed ? (
+                                <img
+                                  src={r.artwork}
+                                  alt=""
+                                  width={56}
+                                  height={56}
+                                  onError={() =>
+                                    setYtImgFail((prev) => new Set(prev).add(r.videoId))
+                                  }
+                                  className="w-14 h-14 rounded-2xl object-cover clay-thumb shrink-0"
+                                />
+                              ) : (
+                                <div className="w-14 h-14 rounded-2xl clay-thumb flex items-center justify-center shrink-0" style={{ background: "#FFE0D6" }}>
+                                  <Icon name="music_note" className="text-[28px]" />
+                                </div>
+                              )}
+                              {isPreviewing && (
+                                <span
+                                  role="status"
+                                  aria-label="Loading preview..."
+                                  className="absolute inset-0 rounded-2xl bg-white/70 flex items-center justify-center"
+                                >
+                                  <span className="w-6 h-6 rounded-full border-2 border-[#64568a] border-t-transparent animate-spin" />
+                                </span>
+                              )}
+                            </div>
                             <div className="min-w-0 flex-1">
                               <p className="font-display font-bold text-[16px] truncate">{r.title}</p>
                               <p className="text-[12px] text-[#49454e] truncate">
-                                {r.artist} • {fmtTime(r.durationSec)}
+                                {isPreviewing
+                                  ? "Loading preview..."
+                                  : `${r.artist} • ${fmtTime(r.durationSec)}`}
                               </p>
                             </div>
                           </div>
@@ -466,7 +452,7 @@ export default function SearchPage() {
                     <p className="text-[13px] font-bold text-[#944652]">{searchError}</p>
                   </div>
                 ) : online.length === 0 ? (
-                  ytResults.length === 0 && !ytMissing && !ytUnavailable ? null : (
+                  ytResults.length === 0 && !ytUnavailable ? null : (
                     <p className="text-[12px] font-bold text-[#49454e] px-1">
                       No Indie matches for this query.
                     </p>
