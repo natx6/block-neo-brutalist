@@ -1,29 +1,24 @@
 import type { Metadata, Viewport } from "next";
-import { Space_Grotesk, Rubik } from "next/font/google";
+import { Quicksand, Nunito_Sans } from "next/font/google";
 import "./globals.css";
 
-const display = Space_Grotesk({
+const display = Quicksand({
   variable: "--font-display",
   subsets: ["latin"],
-  weight: ["500", "700"],
+  weight: ["500", "600", "700"],
 });
 
-const body = Rubik({
+const body = Nunito_Sans({
   variable: "--font-body",
   subsets: ["latin"],
-  weight: ["400", "500", "700"],
+  weight: ["400", "500", "600", "700", "800"],
 });
 
 export const metadata: Metadata = {
-  title: "BLOCK — What's the Vibe?",
-  description: "Neo-brutalist offline music stash. Face 1: Home.",
+  title: "Puff — Cozy Music",
+  description: "Puff claymorphic offline music player. Face 1: Home.",
   manifest: "/manifest.json",
-  appleWebApp: {
-    capable: true,
-    statusBarStyle: "default",
-    title: "BLOCK",
-  },
-  formatDetection: { telephone: false },
+  appleWebApp: { capable: true, statusBarStyle: "default", title: "Puff" },
 };
 
 export const viewport: Viewport = {
@@ -32,14 +27,10 @@ export const viewport: Viewport = {
   maximumScale: 1,
   userScalable: false,
   viewportFit: "cover",
-  themeColor: "#fff9eb",
+  themeColor: "#fff7ff",
 };
 
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className={`${display.variable} ${body.variable}`}>
       <body className="min-h-dvh flex flex-col antialiased">{children}</body>
