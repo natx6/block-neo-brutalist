@@ -1,0 +1,71 @@
+@import "tailwindcss";
+
+@theme {
+  --color-cream: #fff9eb;
+  --color-cream-deep: #fdefa6;
+  --color-cream-soft: #fff4c3;
+  --color-ink: #121212;
+  --color-pink: #ff5da2;
+  --color-pink-soft: #ffd9e3;
+  --color-blue: #1c3fe7;
+  --color-blue-soft: #dee0ff;
+  --color-blue-bright: #405cff;
+  --color-lime: #b6f23c;
+  --color-lime-deep: #9ed81f;
+  --color-lilac: #c7a6ff;
+  --color-paper: #ffffff;
+
+  --font-display: "Space Grotesk", sans-serif;
+  --font-body: "Rubik", sans-serif;
+}
+
+html, body {
+  background: #fff9eb;
+  color: #201c00;
+  font-family: "Rubik", system-ui, sans-serif;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.font-display {
+  font-family: "Space Grotesk", sans-serif;
+}
+
+.brutal {
+  border: 3px solid #121212;
+  box-shadow: 6px 6px 0 0 #121212;
+}
+.brutal-sm {
+  border: 3px solid #121212;
+  box-shadow: 4px 4px 0 0 #121212;
+}
+.brutal-xs {
+  border: 3px solid #121212;
+  box-shadow: 3px 3px 0 0 #121212;
+}
+.pressable {
+  transition: transform 0.08s ease-out, box-shadow 0.08s ease-out;
+}
+.pressable:active {
+  transform: translate(4px, 4px);
+  box-shadow: 0 0 0 0 #121212 !important;
+}
+
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+.pt-safe { padding-top: env(safe-area-inset-top); }
+.pb-safe { padding-bottom: env(safe-area-inset-bottom); }
+
+@keyframes eq-bounce {
+  0%, 100% { transform: scaleY(0.4); }
+  50% { transform: scaleY(1); }
+}
+.eq-bar {
+  transform-origin: bottom;
+  animation: eq-bounce 0.9s ease-in-out infinite;
+}
+
+@keyframes ping-soft {
+  0% { transform: scale(1); opacity: 1; }
+  100% { transform: scale(2); opacity: 0; }
+}
