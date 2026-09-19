@@ -70,6 +70,7 @@ export default function SearchPage() {
   const [urlError, setUrlError] = useState("");
   const [importStatus, setImportStatus] = useState("");
   const [previewingId, setPreviewingId] = useState<string | null>(null);
+  const [previewError, setPreviewError] = useState("");
   const fileRef = useRef<HTMLInputElement>(null);
 
   const refresh = useCallback(async () => {
@@ -102,6 +103,7 @@ export default function SearchPage() {
     }
     setSearching(true);
     setSearchError("");
+    setPreviewError("");
     setYtUnavailable(false);
     const creds = loadSpCreds();
     setSpConnected(!!creds);
@@ -232,11 +234,20 @@ export default function SearchPage() {
     const key = r.videoId;
     if (previewingId) return;
     setPreviewingId(key);
+    setPreviewError("");
     try {
-      const { url } = await ytPreviewUrl(r.videoId);
-      await preview(ytMeta(r), url);
+      try {
+        const { url } = await ytPreviewUrl(r.videoId);
+        await preview(ytMeta(r), url);
+      } catch {
+        // Transient throttle on the stream lookup — one spaced retry.
+        await new Promise((res) => setTimeout(res, 2500));
+        const { url } = await ytPreviewUrl(r.videoId);
+        await preview(ytMeta(r), url);
+      }
     } catch {
-      setYtUnavailable(true);
+      // Keep the results list intact; show an inline note instead.
+      setPreviewError("Couldn't load that preview — try again in a bit.");
     } finally {
       setPreviewingId(null);
     }
@@ -380,6 +391,10 @@ export default function SearchPage() {
                     Official only
                   </button>
                 </div>
+
+                {previewError && (
+                  <p className="text-[12px] font-bold t-tertiary-text px-1">{previewError}</p>
+                )}
 
                 {canonical && spConnected && (
                   <div className="w-full t-card p-3 rounded-2xl clay-card flex items-center gap-3">
