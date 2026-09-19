@@ -1,6 +1,7 @@
 import { db } from "./db";
 import { ART_FALLBACKS, cleanFileTitle } from "./catalog";
 import { audiusStreamUrl, type OnlineResult } from "./audius";
+import { ytAudioUrl } from "./youtube";
 
 export async function downloadWithProgress(
   url: string,
@@ -156,4 +157,55 @@ export function storeSettings(s: Settings) {
   try {
     localStorage.setItem(SETTINGS_KEY, JSON.stringify(s));
   } catch {}
+}
+
+export async function saveYouTubeTrack(
+  r: { videoId: string; title: string; artist: string; durationSec: number; artwork: string | null },
+  quality = "Good",
+  onProgress?: (pct: number) => void
+) {
+  const id = `yt-${r.videoId}`;
+  const existing = await db.tracks.get(id);
+  if (existing) return existing;
+  const res = await fetch(ytAudioUrl(r.videoId, quality));
+  if (!res.ok) throw new Error("yt-download-failed");
+  let blob: Blob;
+  if (!res.body) {
+    blob = await res.blob();
+  } else {
+    const total = Number(res.headers.get("content-length") || 0);
+    const reader = res.body.getReader();
+    const chunks: BlobPart[] = [];
+    let loaded = 0;
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      chunks.push(value);
+      loaded += value.length;
+      onProgress?.(total ? Math.round((loaded / total) * 100) : 0);
+    }
+    blob = new Blob(chunks, { type: res.headers.get("content-type") || "audio/mp4" });
+  }
+  if (blob.size < 1024) throw new Error("yt-download-failed");
+  const probed = await probeDuration(blob);
+  const art = fallbackArt(Date.now() % 1000);
+  const rec = {
+    id,
+    title: r.title,
+    artist: r.artist,
+    durationSec: probed || r.durationSec,
+    icon: "music_note",
+    bg: art.bg,
+    artwork: r.artwork,
+    source: "youtube",
+    sourceId: r.videoId,
+    blob,
+    mime: blob.type || "audio/mp4",
+    size: blob.size,
+    quality,
+    addedAt: Date.now(),
+    playCount: 0,
+  };
+  await db.tracks.put(rec);
+  return rec;
 }

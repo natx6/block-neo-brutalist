@@ -9,9 +9,44 @@ import {
   saveAudiusTrack,
   saveFileTracks,
   saveUrlTrack,
+  saveYouTubeTrack,
 } from "../../lib/downloads";
 import { audiusStreamUrl, searchAudius, type OnlineResult } from "../../lib/audius";
+import {
+  searchYouTube,
+  ytPreviewUrl,
+  WorkerMissing,
+  type YTResult,
+} from "../../lib/youtube";
 import { usePlayer } from "../../lib/player-context";
+
+function ytMeta(r: YTResult) {
+  return {
+    id: `yt-${r.videoId}`,
+    title: r.title,
+    artist: r.artist,
+    durationSec: r.durationSec,
+    icon: "music_note",
+    bg: "#FFE0D6",
+    artwork: r.artwork,
+    source: "youtube" as const,
+    sourceId: r.videoId,
+  };
+}
+
+function audiusMeta(r: OnlineResult) {
+  return {
+    id: `audius-${r.sourceId}`,
+    title: r.title,
+    artist: r.artist,
+    durationSec: r.durationSec,
+    icon: "music_note",
+    bg: "#E9DCFF",
+    artwork: r.artwork,
+    source: "audius" as const,
+    sourceId: r.sourceId,
+  };
+}
 
 export default function SearchPage() {
   const { current, playing, play, preview } = usePlayer();
@@ -20,8 +55,12 @@ export default function SearchPage() {
   const [saved, setSaved] = useState<SavedTrack[]>([]);
   const [savedIds, setSavedIds] = useState<Set<string>>(new Set());
   const [online, setOnline] = useState<OnlineResult[]>([]);
+  const [ytResults, setYtResults] = useState<YTResult[]>([]);
   const [searching, setSearching] = useState(false);
   const [searchError, setSearchError] = useState("");
+  const [ytMissing, setYtMissing] = useState(false);
+  const [ytUnavailable, setYtUnavailable] = useState(false);
+  const [ytImgFail, setYtImgFail] = useState<Set<string>>(new Set());
   const [dlProg, setDlProg] = useState<Record<string, number>>({});
   const [url, setUrl] = useState("");
   const [downloading, setDownloading] = useState(false);
@@ -51,25 +90,44 @@ export default function SearchPage() {
     let cancelled = false;
     if (!debounced) {
       setOnline([]);
+      setYtResults([]);
       setSearching(false);
       setSearchError("");
+      setYtMissing(false);
+      setYtUnavailable(false);
       return;
     }
     setSearching(true);
     setSearchError("");
-    searchAudius(debounced, 15)
-      .then((res) => {
-        if (!cancelled) setOnline(res);
-      })
-      .catch(() => {
-        if (!cancelled) {
+    setYtMissing(false);
+    setYtUnavailable(false);
+    Promise.allSettled([searchYouTube(debounced, 15), searchAudius(debounced, 15)]).then(
+      ([yt, au]) => {
+        if (cancelled) return;
+        if (yt.status === "fulfilled") {
+          setYtResults(yt.value);
+          setYtMissing(false);
+          setYtUnavailable(false);
+        } else {
+          const err = yt.reason as unknown;
+          const isMissing =
+            err instanceof WorkerMissing ||
+            (err instanceof Error &&
+              (/no-worker|501|WorkerMissing/i.test(err.message)));
+          setYtResults([]);
+          setYtMissing(isMissing);
+          setYtUnavailable(!isMissing);
+        }
+        if (au.status === "fulfilled") {
+          setOnline(au.value);
+          setSearchError("");
+        } else {
           setOnline([]);
           setSearchError("Search failed — check connection.");
         }
-      })
-      .finally(() => {
-        if (!cancelled) setSearching(false);
-      });
+        setSearching(false);
+      }
+    );
     return () => {
       cancelled = true;
     };
@@ -123,7 +181,28 @@ export default function SearchPage() {
     });
   };
 
+  const handleSaveYouTube = async (r: YTResult) => {
+    const key = `yt-${r.videoId}`;
+    setDlProg((prev) => ({ ...prev, [key]: 0 }));
+    try {
+      await saveYouTubeTrack(r, loadSettings().quality, (p) =>
+        setDlProg((prev) => ({ ...prev, [key]: p }))
+      );
+      await refresh();
+    } catch {}
+    setDlProg((prev) => {
+      const next = { ...prev };
+      delete next[key];
+      return next;
+    });
+  };
+
   const showingOnline = debounced.length > 0;
+  const ytQueue = ytResults.map((r) => ({ meta: ytMeta(r), url: ytPreviewUrl(r.videoId) }));
+  const audiusQueue = online.map((r) => ({
+    meta: audiusMeta(r),
+    url: audiusStreamUrl(r.sourceId),
+  }));
 
   return (
     <div className="bg-[#fff7ff] min-h-dvh max-w-[430px] mx-auto flex flex-col relative">
@@ -224,16 +303,6 @@ export default function SearchPage() {
 
         {showingOnline ? (
           <>
-            <div className="flex items-center justify-between px-1">
-              <div className="flex items-center gap-2">
-                <span className="font-display font-bold text-[18px]">Online</span>
-                <span className="font-display font-bold text-[12px] bg-[#e9ddff] px-2.5 py-0.5 rounded-full clay-thumb">
-                  {online.length}
-                </span>
-              </div>
-              <span className="text-[11px] font-bold text-[#49454e]">Tap to preview</span>
-            </div>
-
             {searching ? (
               <div className="w-full bg-white p-6 rounded-2xl clay-card flex flex-col items-center text-center gap-3">
                 <div className="flex items-center gap-2">
@@ -243,101 +312,242 @@ export default function SearchPage() {
                 </div>
                 <p className="text-[13px] font-bold text-[#49454e]">Searching the clouds...</p>
               </div>
-            ) : searchError ? (
-              <div className="w-full bg-white p-6 rounded-2xl clay-card flex flex-col items-center text-center">
-                <p className="text-[13px] font-bold text-[#944652]">{searchError}</p>
-              </div>
-            ) : online.length === 0 ? (
-              <div className="w-full bg-white p-6 rounded-2xl clay-card flex flex-col items-center text-center">
-                <p className="font-display font-bold text-[18px]">No matches</p>
-                <p className="text-[13px] text-[#49454e]">Try a different title or artist.</p>
-              </div>
             ) : (
-              <div className="flex flex-col gap-3">
-                {online.map((r) => {
-                  const savedKey = `audius-${r.sourceId}`;
-                  const isSaved = savedIds.has(savedKey);
-                  const prog = dlProg[r.sourceId];
-                  const isDownloading = prog !== undefined;
-                  return (
-                    <div
-                      key={r.sourceId}
-                      onClick={() =>
-                        preview(
-                          {
-                            id: savedKey,
-                            title: r.title,
-                            artist: r.artist,
-                            durationSec: r.durationSec,
-                            icon: "music_note",
-                            bg: "#E9DCFF",
-                            artwork: r.artwork,
-                          },
-                          audiusStreamUrl(r.sourceId)
-                        )
-                      }
-                      className="w-full bg-white p-3 rounded-2xl clay-card flex items-center justify-between gap-2 text-left cursor-pointer"
-                    >
-                      <div className="flex items-center gap-3 min-w-0 flex-1">
-                        {r.artwork ? (
-                          <img
-                            src={r.artwork}
-                            alt=""
-                            width={56}
-                            height={56}
-                            className="w-14 h-14 rounded-2xl object-cover clay-thumb shrink-0"
-                          />
-                        ) : (
-                          <div className="w-14 h-14 rounded-2xl clay-thumb flex items-center justify-center shrink-0" style={{ background: "#E9DCFF" }}>
-                            <Icon name="music_note" className="text-[28px]" />
-                          </div>
-                        )}
-                        <div className="min-w-0 flex-1">
-                          <p className="font-display font-bold text-[16px] truncate">{r.title}</p>
-                          <p className="text-[12px] text-[#49454e] truncate">
-                            {r.artist} • {fmtTime(r.durationSec)}
-                          </p>
-                        </div>
+              <>
+                <div className="flex items-center justify-between px-1">
+                  <div className="flex items-center gap-2">
+                    <span className="font-display font-bold text-[18px]">Top hits</span>
+                    {!ytMissing && !ytUnavailable && (
+                      <span className="font-display font-bold text-[12px] bg-[#ffe0d6] px-2.5 py-0.5 rounded-full clay-thumb">
+                        {ytResults.length}
+                      </span>
+                    )}
+                  </div>
+                  <span className="text-[11px] font-bold text-[#49454e]">Tap to preview</span>
+                </div>
+
+                {ytMissing ? (
+                  <div className="w-full bg-white p-4 rounded-2xl clay-card flex flex-col gap-2">
+                    <div className="flex items-center gap-3">
+                      <div className="w-12 h-12 rounded-2xl bg-[#ffe0d6] clay-thumb flex items-center justify-center shrink-0 text-[#5c3a2a]">
+                        <Icon name="build" className="text-[24px]" />
                       </div>
-                      {isSaved ? (
-                        <span aria-label="Saved" className="w-11 h-11 rounded-full bg-[#c7f5dc] clay-thumb flex items-center justify-center shrink-0 text-[#144d32]">
-                          <Icon name="check" />
-                        </span>
-                      ) : isDownloading ? (
-                        <span className="relative w-11 h-11 rounded-full bg-[#f6e9ff] clay-thumb flex items-center justify-center shrink-0">
-                          <svg className="w-11 h-11 -rotate-90" viewBox="0 0 44 44">
-                            <circle cx="22" cy="22" r="17" stroke="#eedbff" strokeWidth="4" fill="none" />
-                            <circle
-                              cx="22"
-                              cy="22"
-                              r="17"
-                              stroke="#306385"
-                              strokeWidth="4"
-                              fill="none"
-                              strokeDasharray="106.8"
-                              strokeDashoffset={106.8 * (1 - prog / 100)}
-                              strokeLinecap="round"
-                            />
-                          </svg>
-                          <span className="absolute text-[10px] font-bold">{prog}%</span>
-                        </span>
-                      ) : (
-                        <button
-                          type="button"
-                          aria-label={`Download ${r.title}`}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleSaveAudius(r);
-                          }}
-                          className="w-11 h-11 rounded-full bg-[#d5c4ff] clay-thumb flex items-center justify-center shrink-0 text-[#231534]"
-                        >
-                          <Icon name="download" />
-                        </button>
-                      )}
+                      <div className="min-w-0">
+                        <p className="font-display font-bold text-[16px]">All-songs unlock</p>
+                        <p className="text-[12px] font-medium text-[#49454e]">
+                          Deploy the 5-minute worker to search all of YouTube.
+                        </p>
+                      </div>
                     </div>
-                  );
-                })}
-              </div>
+                    <details className="bg-[#fff4ee] rounded-xl px-3 py-2">
+                      <summary className="text-[12px] font-bold cursor-pointer">
+                        Setup steps
+                      </summary>
+                      <p className="text-[12px] font-medium text-[#49454e] mt-2">
+                        Run in a terminal:
+                      </p>
+                      <code className="block text-[11px] font-bold bg-white rounded-lg px-2 py-1.5 mt-1 break-all">
+                        cd block-app/worker &amp;&amp; fly auth login &amp;&amp; fly launch --no-deploy
+                        &amp;&amp; fly deploy
+                      </code>
+                      <p className="text-[12px] font-medium text-[#49454e] mt-2">
+                        Then set WORKER_URL in Vercel.
+                      </p>
+                    </details>
+                  </div>
+                ) : ytUnavailable ? (
+                  <p className="text-[12px] font-bold text-[#49454e] px-1">
+                    YouTube unavailable right now.
+                  </p>
+                ) : ytResults.length === 0 ? (
+                  online.length === 0 && !searchError ? (
+                    <div className="w-full bg-white p-6 rounded-2xl clay-card flex flex-col items-center text-center">
+                      <p className="font-display font-bold text-[18px]">No matches</p>
+                      <p className="text-[13px] text-[#49454e]">Try a different title or artist.</p>
+                    </div>
+                  ) : (
+                    <p className="text-[12px] font-bold text-[#49454e] px-1">
+                      No Top hits for this query.
+                    </p>
+                  )
+                ) : (
+                  <div className="flex flex-col gap-3">
+                    {ytResults.map((r) => {
+                      const savedKey = `yt-${r.videoId}`;
+                      const isSaved = savedIds.has(savedKey);
+                      const prog = dlProg[savedKey];
+                      const isDownloading = prog !== undefined;
+                      const imgFailed = ytImgFail.has(r.videoId);
+                      return (
+                        <div
+                          key={r.videoId}
+                          onClick={() =>
+                            preview(ytMeta(r), ytPreviewUrl(r.videoId), ytQueue)
+                          }
+                          className="w-full bg-white p-3 rounded-2xl clay-card flex items-center justify-between gap-2 text-left cursor-pointer"
+                        >
+                          <div className="flex items-center gap-3 min-w-0 flex-1">
+                            {r.artwork && !imgFailed ? (
+                              <img
+                                src={r.artwork}
+                                alt=""
+                                width={56}
+                                height={56}
+                                onError={() =>
+                                  setYtImgFail((prev) => new Set(prev).add(r.videoId))
+                                }
+                                className="w-14 h-14 rounded-2xl object-cover clay-thumb shrink-0"
+                              />
+                            ) : (
+                              <div className="w-14 h-14 rounded-2xl clay-thumb flex items-center justify-center shrink-0" style={{ background: "#FFE0D6" }}>
+                                <Icon name="music_note" className="text-[28px]" />
+                              </div>
+                            )}
+                            <div className="min-w-0 flex-1">
+                              <p className="font-display font-bold text-[16px] truncate">{r.title}</p>
+                              <p className="text-[12px] text-[#49454e] truncate">
+                                {r.artist} • {fmtTime(r.durationSec)}
+                              </p>
+                            </div>
+                          </div>
+                          {isSaved ? (
+                            <span aria-label="Saved" className="w-11 h-11 rounded-full bg-[#c7f5dc] clay-thumb flex items-center justify-center shrink-0 text-[#144d32]">
+                              <Icon name="check" />
+                            </span>
+                          ) : isDownloading ? (
+                            <span className="relative w-11 h-11 rounded-full bg-[#f6e9ff] clay-thumb flex items-center justify-center shrink-0">
+                              <svg className="w-11 h-11 -rotate-90" viewBox="0 0 44 44">
+                                <circle cx="22" cy="22" r="17" stroke="#eedbff" strokeWidth="4" fill="none" />
+                                <circle
+                                  cx="22"
+                                  cy="22"
+                                  r="17"
+                                  stroke="#306385"
+                                  strokeWidth="4"
+                                  fill="none"
+                                  strokeDasharray="106.8"
+                                  strokeDashoffset={106.8 * (1 - prog / 100)}
+                                  strokeLinecap="round"
+                                />
+                              </svg>
+                              <span className="absolute text-[10px] font-bold">{prog}%</span>
+                            </span>
+                          ) : (
+                            <button
+                              type="button"
+                              aria-label={`Download ${r.title}`}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleSaveYouTube(r);
+                              }}
+                              className="w-11 h-11 rounded-full bg-[#ffd9c9] clay-thumb flex items-center justify-center shrink-0 text-[#231534]"
+                            >
+                              <Icon name="download" />
+                            </button>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+
+                <div className="flex items-center justify-between px-1">
+                  <div className="flex items-center gap-2">
+                    <span className="font-display font-bold text-[18px]">Indie</span>
+                    <span className="font-display font-bold text-[12px] bg-[#e9ddff] px-2.5 py-0.5 rounded-full clay-thumb">
+                      {online.length}
+                    </span>
+                  </div>
+                  <span className="text-[11px] font-bold text-[#49454e]">Tap to preview</span>
+                </div>
+
+                {searchError ? (
+                  <div className="w-full bg-white p-6 rounded-2xl clay-card flex flex-col items-center text-center">
+                    <p className="text-[13px] font-bold text-[#944652]">{searchError}</p>
+                  </div>
+                ) : online.length === 0 ? (
+                  ytResults.length === 0 && !ytMissing && !ytUnavailable ? null : (
+                    <p className="text-[12px] font-bold text-[#49454e] px-1">
+                      No Indie matches for this query.
+                    </p>
+                  )
+                ) : (
+                  <div className="flex flex-col gap-3">
+                    {online.map((r) => {
+                      const savedKey = `audius-${r.sourceId}`;
+                      const isSaved = savedIds.has(savedKey);
+                      const prog = dlProg[r.sourceId];
+                      const isDownloading = prog !== undefined;
+                      return (
+                        <div
+                          key={r.sourceId}
+                          onClick={() =>
+                            preview(audiusMeta(r), audiusStreamUrl(r.sourceId), audiusQueue)
+                          }
+                          className="w-full bg-white p-3 rounded-2xl clay-card flex items-center justify-between gap-2 text-left cursor-pointer"
+                        >
+                          <div className="flex items-center gap-3 min-w-0 flex-1">
+                            {r.artwork ? (
+                              <img
+                                src={r.artwork}
+                                alt=""
+                                width={56}
+                                height={56}
+                                className="w-14 h-14 rounded-2xl object-cover clay-thumb shrink-0"
+                              />
+                            ) : (
+                              <div className="w-14 h-14 rounded-2xl clay-thumb flex items-center justify-center shrink-0" style={{ background: "#E9DCFF" }}>
+                                <Icon name="music_note" className="text-[28px]" />
+                              </div>
+                            )}
+                            <div className="min-w-0 flex-1">
+                              <p className="font-display font-bold text-[16px] truncate">{r.title}</p>
+                              <p className="text-[12px] text-[#49454e] truncate">
+                                {r.artist} • {fmtTime(r.durationSec)}
+                              </p>
+                            </div>
+                          </div>
+                          {isSaved ? (
+                            <span aria-label="Saved" className="w-11 h-11 rounded-full bg-[#c7f5dc] clay-thumb flex items-center justify-center shrink-0 text-[#144d32]">
+                              <Icon name="check" />
+                            </span>
+                          ) : isDownloading ? (
+                            <span className="relative w-11 h-11 rounded-full bg-[#f6e9ff] clay-thumb flex items-center justify-center shrink-0">
+                              <svg className="w-11 h-11 -rotate-90" viewBox="0 0 44 44">
+                                <circle cx="22" cy="22" r="17" stroke="#eedbff" strokeWidth="4" fill="none" />
+                                <circle
+                                  cx="22"
+                                  cy="22"
+                                  r="17"
+                                  stroke="#306385"
+                                  strokeWidth="4"
+                                  fill="none"
+                                  strokeDasharray="106.8"
+                                  strokeDashoffset={106.8 * (1 - prog / 100)}
+                                  strokeLinecap="round"
+                                />
+                              </svg>
+                              <span className="absolute text-[10px] font-bold">{prog}%</span>
+                            </span>
+                          ) : (
+                            <button
+                              type="button"
+                              aria-label={`Download ${r.title}`}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleSaveAudius(r);
+                              }}
+                              className="w-11 h-11 rounded-full bg-[#d5c4ff] clay-thumb flex items-center justify-center shrink-0 text-[#231534]"
+                            >
+                              <Icon name="download" />
+                            </button>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </>
             )}
           </>
         ) : (
