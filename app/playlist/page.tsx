@@ -63,7 +63,7 @@ function PlaylistInner() {
 
   return (
     <div className="t-bg min-h-dvh max-w-[430px] mx-auto flex flex-col relative">
-      <header className="fixed top-0 inset-x-0 z-50 pt-safe t-bg-80 backdrop-blur-xl">
+      <header className="fixed top-0 inset-x-0 z-50 pt-safe t-bg">
         <div className="max-w-[430px] mx-auto h-16 px-5 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Link href="/library" className="w-11 h-11 rounded-full t-container clay-card flex items-center justify-center min-w-[44px]">‹</Link>

@@ -142,7 +142,7 @@ export default function OfflinePage() {
           })
         )}
 
-        <div className="w-full t-variant-40 rounded-2xl p-4 clay-card flex gap-3 items-start">
+        <div className="w-full t-variant-40 rounded-2xl p-4 clay-card flex gap-3 items-start mb-8">
           <Icon name="lightbulb" className="text-[20px]" />
           <p className="text-[12px]">Tip: everything here plays in airplane mode.</p>
         </div>

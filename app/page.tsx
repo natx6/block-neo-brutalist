@@ -21,6 +21,9 @@ export default function Home() {
   const fileRef = useRef<HTMLInputElement>(null);
   const { current, playing, play } = usePlayer();
 
+  const hour = new Date().getHours();
+  const greeting = hour < 5 ? "Up late" : hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
+
   const refresh = useCallback(async () => {
     try {
       setRecent(await recentTracks(4));
@@ -62,7 +65,7 @@ export default function Home() {
 
   return (
     <div className="t-bg min-h-dvh max-w-[430px] mx-auto flex flex-col relative">
-      <header className="fixed top-0 inset-x-0 z-50 pt-safe t-bg-80 backdrop-blur-xl">
+      <header className="fixed top-0 inset-x-0 z-50 pt-safe t-bg">
         <div className="max-w-[430px] mx-auto h-16 px-5 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <div className="w-9 h-9 rounded-2xl t-primary-ct clay-thumb flex items-center justify-center">
@@ -80,10 +83,7 @@ export default function Home() {
 
       <main className="flex-1 pt-16 pb-[180px]">
         <div className="px-5 pt-3">
-          <div>
-            <p className="font-display font-bold text-[18px]">Good afternoon</p>
-            <p className="text-[12px] t-muted font-medium">Sweet Pea&apos;s Sanctuary</p>
-          </div>
+          <p className="font-display font-bold text-[18px]">{greeting}</p>
         </div>
 
         <div className="mt-6">
@@ -191,7 +191,7 @@ export default function Home() {
           </div>
         </div>
 
-        <div className="px-5 mt-4">
+        <div className="px-5 mt-4 mb-8">
           <div className="p-4 rounded-2xl t-card clay-card flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-full t-secondary-ct flex items-center justify-center">

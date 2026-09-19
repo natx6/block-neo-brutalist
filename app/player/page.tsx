@@ -151,7 +151,7 @@ export default function PlayerPage() {
 
   return (
     <div className="t-bg min-h-dvh max-w-[430px] mx-auto flex flex-col relative overflow-hidden">
-      <header className="fixed top-0 inset-x-0 z-50 pt-safe t-bg-80 backdrop-blur-xl">
+      <header className="fixed top-0 inset-x-0 z-50 pt-safe t-bg">
         <div className="max-w-[430px] mx-auto h-16 px-5 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Link href="/" aria-label="Back" className="w-11 h-11 rounded-full t-container clay-card flex items-center justify-center min-w-[44px]">‹</Link>
@@ -166,7 +166,7 @@ export default function PlayerPage() {
 
         {!current ? (
           <div className="flex flex-col items-center text-center pt-10">
-            <div className="w-[280px] h-[280px] rounded-[32px] p-4 t-card clay-card flex items-center justify-center">
+            <div className="w-full max-w-[340px] aspect-square rounded-[32px] p-4 t-card clay-card flex items-center justify-center">
               <div className="w-full h-full rounded-[22px] t-primary-ct flex items-center justify-center">
                 <Icon name="cloud" className="text-[72px]" fill />
               </div>
@@ -181,7 +181,7 @@ export default function PlayerPage() {
         ) : (
           <>
             <div className="flex justify-center pt-2 pb-6">
-              <div className="relative w-[280px] h-[280px] rounded-[32px] p-4 t-card clay-card flex items-center justify-center">
+              <div className="relative w-full max-w-[340px] aspect-square rounded-[32px] p-4 t-card clay-card flex items-center justify-center">
                 <div className="absolute top-6 left-8 right-8 h-8 rounded-full bg-gradient-to-b from-white/70 to-transparent pointer-events-none z-10" />
                 <div className="w-full h-full rounded-[22px] overflow-hidden flex items-center justify-center gap-2 text-[#4c3f70]" style={{ background: current.bg }}>
                   {current.artwork && !artFailed ? (
@@ -197,10 +197,6 @@ export default function PlayerPage() {
                       <Icon name="music_note" className="text-[64px]" />
                     </>
                   )}
-                </div>
-                <div className="absolute -bottom-3 right-5 px-3 py-1 rounded-full t-card clay-thumb flex items-center gap-1.5 z-20">
-                  <span className="w-2 h-2 rounded-full bg-[var(--secondary)] animate-pulse" />
-                  <span className="font-display font-bold text-[11px] tracking-wider uppercase">Lo-Fi Master</span>
                 </div>
               </div>
             </div>

@@ -68,7 +68,7 @@ export function BottomNav({ active }: { active: string }) {
 
 export function TopBar({ title, right }: { title: string; right?: React.ReactNode }) {
   return (
-    <header className="fixed top-0 inset-x-0 z-50 pt-safe t-bg-80 backdrop-blur-xl">
+    <header className="fixed top-0 inset-x-0 z-50 pt-safe t-bg">
       <div className="max-w-[430px] mx-auto h-16 px-5 flex items-center justify-between">
         <div className="flex items-center gap-2">
           <div className="w-9 h-9 rounded-2xl t-primary-ct clay-thumb flex items-center justify-center">
