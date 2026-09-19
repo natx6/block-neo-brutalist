@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { BottomNav, MiniPlayer } from "./components/Nav";
 
 const RECENT = [
   { title: "Marshmallow Sunset", artist: "Sweet Pea", bg: "#FFE0D6", emoji: "🌅" },
@@ -156,43 +157,10 @@ export default function Home() {
       </main>
 
       {/* Mini player */}
-      <aside className="fixed bottom-[88px] inset-x-0 z-40 px-5 pointer-events-none">
-        <div className="pointer-events-auto mx-auto max-w-[390px] h-[60px] bg-white/95 rounded-full px-3 flex items-center justify-between clay-pill">
-          <div className="flex items-center gap-3 min-w-0 flex-1">
-            <div className="w-11 h-11 rounded-full bg-[#d5c4ff] clay-thumb flex items-center justify-center shrink-0">🎵</div>
-            <div className="min-w-0 flex-1">
-              <p className="font-display font-bold text-[14px] truncate">Cotton Candy Clouds</p>
-              <p className="text-[11px] text-[#944652] truncate font-bold">Lofi Pillow</p>
-            </div>
-          </div>
-          <div className="flex items-center gap-1 shrink-0">
-            <button className="w-11 h-11 flex items-center justify-center text-lg min-w-[44px] min-h-[44px]">♡</button>
-            <button onClick={() => setPlaying(!playing)} className="w-11 h-11 rounded-full bg-[#64568a] text-white clay-button-active flex items-center justify-center min-w-[44px] min-h-[44px]">
-              {playing ? "⏸" : "▶"}
-            </button>
-          </div>
-        </div>
-      </aside>
+      <MiniPlayer />
 
       {/* Bottom nav */}
-      <nav className="fixed bottom-0 inset-x-0 z-50 pb-safe px-5 pointer-events-none">
-        <div className="pointer-events-auto mx-auto max-w-[390px] h-16 bg-white/90 rounded-full mb-2 px-2 flex items-center justify-around clay-pill">
-          {[
-            { label: "Home", icon: "🏠", active: true },
-            { label: "Search", icon: "🔍", active: false },
-            { label: "Library", icon: "📚", active: false },
-            { label: "Offline", icon: "☁️", active: false },
-          ].map((n) => (
-            <span
-              key={n.label}
-              className={`flex flex-col items-center justify-center w-14 h-12 rounded-full min-w-[56px] min-h-[48px] ${n.active ? "bg-[#d5c4ff] clay-button-active font-bold" : "text-[#49454e]"}`}
-            >
-              <span className="text-[20px] leading-none">{n.icon}</span>
-              <span className="font-display font-bold text-[10px]">{n.label}</span>
-            </span>
-          ))}
-        </div>
-      </nav>
+      <BottomNav active="home" />
     </div>
   );
 }
