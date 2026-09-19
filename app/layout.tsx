@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Quicksand, Nunito_Sans } from "next/font/google";
 import "./globals.css";
+import { PlayerProvider } from "../lib/player-context";
 
 const display = Quicksand({
   variable: "--font-display",
@@ -39,7 +40,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           rel="stylesheet"
         />
       </head>
-      <body className="min-h-dvh flex flex-col antialiased">{children}</body>
+      <body className="min-h-dvh flex flex-col antialiased">
+        <PlayerProvider>{children}</PlayerProvider>
+      </body>
     </html>
   );
 }

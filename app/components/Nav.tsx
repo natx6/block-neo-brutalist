@@ -2,14 +2,17 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import { usePlayer } from "../../lib/player-context";
 
 export function Icon({ name, fill = false, className = "" }: { name: string; fill?: boolean; className?: string }) {
   return <span className={`material-symbols-outlined ${fill ? "fill" : ""} ${className}`}>{name}</span>;
 }
 
 export function MiniPlayer() {
-  const [playing, setPlaying] = useState(false);
+  const { current, playing, toggle } = usePlayer();
   const [liked, setLiked] = useState(false);
+  const title = current?.title ?? "Cotton Candy Clouds";
+  const artist = current?.artist ?? "Lofi Pillow";
   return (
     <aside className="fixed inset-x-0 z-40 px-5 pointer-events-none" style={{ bottom: "calc(5.5rem + env(safe-area-inset-bottom, 0px))" }}>
       <div className="pointer-events-auto mx-auto max-w-[390px] h-[64px] bg-white/95 rounded-full px-3 flex items-center justify-between clay-pill">
@@ -18,15 +21,15 @@ export function MiniPlayer() {
             <Icon name="music_note" />
           </div>
           <div className="min-w-0 flex-1">
-            <p className="font-display font-bold text-[14px] truncate">Cotton Candy Clouds</p>
-            <p className="text-[11px] text-[#944652] truncate font-bold">Lofi Pillow</p>
+            <p className="font-display font-bold text-[14px] truncate">{title}</p>
+            <p className="text-[11px] text-[#944652] truncate font-bold">{artist}</p>
           </div>
         </Link>
         <div className="flex items-center gap-1 shrink-0">
           <button onClick={() => setLiked(!liked)} aria-label="Favorite" className="w-11 h-11 flex items-center justify-center min-w-[44px] min-h-[44px] text-[#49454e]">
             <Icon name="favorite" fill={liked} />
           </button>
-          <button onClick={() => setPlaying(!playing)} aria-label="Play or Pause" className="w-11 h-11 rounded-full bg-[#64568a] text-white clay-button-active flex items-center justify-center min-w-[44px] min-h-[44px]">
+          <button onClick={toggle} aria-label="Play or Pause" className="w-11 h-11 rounded-full bg-[#64568a] text-white clay-button-active flex items-center justify-center min-w-[44px] min-h-[44px]">
             <Icon name={playing ? "pause" : "play_arrow"} fill />
           </button>
         </div>

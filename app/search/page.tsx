@@ -1,21 +1,53 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { BottomNav, Icon, MiniPlayer, TopBar } from "../components/Nav";
-
-const TRACKS = [
-  { title: "Pillow Talk Dreams", artist: "Lily & Cloud", time: "3:14", icon: "cloud", bg: "#E9DCFF", state: "idle" },
-  { title: "Mint Jelly Reverie", artist: "Bubble Pop", time: "2:48", icon: "water_drop", bg: "#D4F7E6", state: "downloading", progress: 68 },
-  { title: "Cozy Blanket Breeze", artist: "Slumber Note", time: "3:52", icon: "bedtime", bg: "#FFE0D6", state: "saved" },
-  { title: "Sugar Plum Lullaby", artist: "Velvet Soft", time: "4:10", icon: "music_note", bg: "#FFD9DC", state: "idle" },
-];
+import { CATALOG, fmtTime } from "../../lib/catalog";
+import { db } from "../../lib/db";
+import { loadSettings, saveCatalogTrack } from "../../lib/downloads";
+import { usePlayer } from "../../lib/player-context";
 
 const FILTERS = ["All", "Sleepy", "Instrumental", "Acoustic", "Ambient"];
 
 export default function SearchPage() {
+  const { play } = usePlayer();
   const [query, setQuery] = useState("Lo-Fi Chill & Sleep");
   const [filter, setFilter] = useState(0);
   const [loading] = useState(false);
+  const [savedIds, setSavedIds] = useState<Set<string>>(new Set());
+  const [progress, setProgress] = useState<Record<string, number>>({});
+
+  const TRACKS = CATALOG.slice(0, 4);
+
+  const refreshSaved = useCallback(async () => {
+    try {
+      const all = await db.tracks.toArray();
+      setSavedIds(new Set(all.map((t) => t.id)));
+    } catch {}
+  }, []);
+
+  useEffect(() => {
+    refreshSaved();
+  }, [refreshSaved]);
+
+  const handleDownload = async (id: string) => {
+    if (savedIds.has(id) || progress[id] !== undefined) return;
+    setProgress((p) => ({ ...p, [id]: 0 }));
+    try {
+      const quality = loadSettings().quality;
+      await saveCatalogTrack(id, quality, (pct) => {
+        setProgress((p) => ({ ...p, [id]: pct }));
+      });
+      await refreshSaved();
+    } catch {
+    } finally {
+      setProgress((p) => {
+        const next = { ...p };
+        delete next[id];
+        return next;
+      });
+    }
+  };
 
   return (
     <div className="bg-[#fff7ff] min-h-dvh max-w-[430px] mx-auto flex flex-col relative">
@@ -61,38 +93,58 @@ export default function SearchPage() {
         </div>
 
         <div className="flex flex-col gap-3">
-          {TRACKS.map((t) => (
-            <div key={t.title} className="w-full bg-white p-3 rounded-2xl clay-card flex items-center justify-between gap-2">
-              <div className="flex items-center gap-3 min-w-0 flex-1">
-                <div className="w-14 h-14 rounded-2xl clay-thumb flex items-center justify-center shrink-0" style={{ background: t.bg }}>
-                  <Icon name={t.icon} className="text-[28px]" />
+          {TRACKS.map((t) => {
+            const isSaved = savedIds.has(t.id);
+            const pct = progress[t.id];
+            const isDownloading = pct !== undefined;
+            return (
+              <div key={t.id} onClick={() => play(t.id)} className="w-full bg-white p-3 rounded-2xl clay-card flex items-center justify-between gap-2 cursor-pointer">
+                <div className="flex items-center gap-3 min-w-0 flex-1">
+                  <div className="w-14 h-14 rounded-2xl clay-thumb flex items-center justify-center shrink-0" style={{ background: t.bg }}>
+                    <Icon name={t.icon} className="text-[28px]" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="font-display font-bold text-[16px] truncate">{t.title}</p>
+                    <p className="text-[12px] text-[#49454e] truncate">{t.artist} • {fmtTime(t.durationSec)}</p>
+                  </div>
                 </div>
-                <div className="min-w-0 flex-1">
-                  <p className="font-display font-bold text-[16px] truncate">{t.title}</p>
-                  <p className="text-[12px] text-[#49454e] truncate">{t.artist} • {t.time}</p>
-                </div>
+                {isSaved ? (
+                  <button aria-label={`Saved ${t.title}`} onClick={(e) => e.stopPropagation()} className="w-11 h-11 rounded-full bg-[#c9e6ff] clay-thumb flex items-center justify-center font-bold min-w-[44px] min-h-[44px]">
+                    <Icon name="check" />
+                  </button>
+                ) : isDownloading ? (
+                  <div className="relative w-11 h-11 rounded-full bg-[#f6e9ff] clay-thumb flex items-center justify-center min-w-[44px] min-h-[44px]">
+                    <svg className="w-11 h-11 -rotate-90" viewBox="0 0 44 44">
+                      <circle cx="22" cy="22" r="17" stroke="#eedbff" strokeWidth="4" fill="none" />
+                      <circle
+                        cx="22"
+                        cy="22"
+                        r="17"
+                        stroke="#306385"
+                        strokeWidth="4"
+                        fill="none"
+                        strokeDasharray="106.8"
+                        strokeDashoffset={106.8 * (1 - (pct || 0) / 100)}
+                        strokeLinecap="round"
+                      />
+                    </svg>
+                    <span className="absolute text-[10px] font-bold">{pct}%</span>
+                  </div>
+                ) : (
+                  <button
+                    aria-label={`Download ${t.title}`}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleDownload(t.id);
+                    }}
+                    className="w-11 h-11 rounded-full bg-[#a6d7fe] clay-thumb flex items-center justify-center min-w-[44px] min-h-[44px] active:scale-90"
+                  >
+                    <Icon name="download" />
+                  </button>
+                )}
               </div>
-              {t.state === "idle" && (
-                <button aria-label={`Download ${t.title}`} className="w-11 h-11 rounded-full bg-[#a6d7fe] clay-thumb flex items-center justify-center min-w-[44px] min-h-[44px] active:scale-90">
-                  <Icon name="download" />
-                </button>
-              )}
-              {t.state === "downloading" && (
-                <div className="relative w-11 h-11 rounded-full bg-[#f6e9ff] clay-thumb flex items-center justify-center min-w-[44px] min-h-[44px]">
-                  <svg className="w-11 h-11 -rotate-90" viewBox="0 0 44 44">
-                    <circle cx="22" cy="22" r="17" stroke="#eedbff" strokeWidth="4" fill="none" />
-                    <circle cx="22" cy="22" r="17" stroke="#306385" strokeWidth="4" fill="none" strokeDasharray="106.8" strokeDashoffset="34.1" strokeLinecap="round" />
-                  </svg>
-                  <span className="absolute text-[10px] font-bold">68%</span>
-                </div>
-              )}
-              {t.state === "saved" && (
-                <button aria-label="Saved" className="w-11 h-11 rounded-full bg-[#c9e6ff] clay-thumb flex items-center justify-center font-bold min-w-[44px] min-h-[44px]">
-                  <Icon name="check" />
-                </button>
-              )}
-            </div>
-          ))}
+            );
+          })}
         </div>
 
         {loading ? (

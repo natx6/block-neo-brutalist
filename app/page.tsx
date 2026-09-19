@@ -3,13 +3,11 @@
 import { useState } from "react";
 import Link from "next/link";
 import { BottomNav, MiniPlayer, Icon } from "./components/Nav";
+import { CATALOG } from "../lib/catalog";
+import { usePlayer } from "../lib/player-context";
 
-const RECENT = [
-  { title: "Marshmallow Sunset", artist: "Sweet Pea", bg: "#FFE0D6", icon: "wb_twilight" },
-  { title: "Boba Rain", artist: "Tea Garden", bg: "#D4F7E6", icon: "water_drop" },
-  { title: "Lavender Fields", artist: "Slumber Pup", bg: "#E9DCFF", icon: "spa" },
-  { title: "Starlight Hug", artist: "Fluff", bg: "#D1EEFF", icon: "star" },
-];
+const RECENT_IDS = ["marshmallow-sunset", "boba-rain", "lavender-fields", "starlight-hug"];
+const RECENT = RECENT_IDS.map((id) => CATALOG.find((t) => t.id === id)!).filter(Boolean);
 
 const MOODS = [
   { title: "Happy", sub: "Sun-kissed beats", bg: "bg-[#FFF2B2]", dot: "bg-[#FFE580]", text: "text-[#574400]", subText: "text-[#7A6000]", icon: "sunny" },
@@ -21,7 +19,7 @@ const MOODS = [
 export default function Home() {
   const [query, setQuery] = useState("");
   const [sleepOn, setSleepOn] = useState(true);
-  const [playing, setPlaying] = useState(false);
+  const { current, playing, play, toggle } = usePlayer();
 
   return (
     <div className="bg-[#fff7ff] min-h-dvh max-w-[430px] mx-auto flex flex-col relative">
@@ -90,14 +88,16 @@ export default function Home() {
             <Link href="/library" className="font-display font-bold text-[12px] text-[#64568a] min-h-[44px] flex items-center">See all</Link>
           </div>
           <div className="flex gap-4 overflow-x-auto px-5 pb-3 pt-1 no-scrollbar">
-            {RECENT.map((r) => (
-              <button key={r.title} onClick={() => setPlaying(!playing)} className="flex flex-col gap-2 shrink-0 w-[140px] text-left active:scale-95 transition-transform">
+            {RECENT.map((r) => {
+              const isCurrent = current?.id === r.id && playing;
+              return (
+              <button key={r.id} onClick={() => play(r.id)} className="flex flex-col gap-2 shrink-0 w-[140px] text-left active:scale-95 transition-transform">
                 <div className="relative w-[140px] h-[140px] rounded-[28px] p-2 clay-card flex items-center justify-center" style={{ background: r.bg }}>
                   <div className="w-full h-full rounded-[20px] bg-white/70 flex items-center justify-center text-[#4c3f70]">
                     <Icon name={r.icon} fill className="text-[56px]" />
                   </div>
                   <div className="absolute bottom-3 right-3 w-9 h-9 rounded-full bg-[#64568a] clay-thumb flex items-center justify-center text-white">
-                    <Icon name={playing ? "pause" : "play_arrow"} fill className="text-[20px]" />
+                    <Icon name={isCurrent ? "pause" : "play_arrow"} fill className="text-[20px]" />
                   </div>
                 </div>
                 <div className="px-1">
@@ -105,7 +105,8 @@ export default function Home() {
                   <p className="text-[12px] text-[#49454e] truncate">{r.artist}</p>
                 </div>
               </button>
-            ))}
+              );
+            })}
           </div>
         </div>
 
@@ -120,8 +121,8 @@ export default function Home() {
                 <h3 className="font-display font-bold text-[18px] mt-1">Cloud Slumber &amp; Tea</h3>
                 <p className="text-[12px] text-[#49454e]">32 dreamy lo-fi acoustics • 1h 48m</p>
               </div>
-              <button onClick={() => setPlaying(!playing)} aria-label="Play daily mix" className="w-14 h-14 rounded-full bg-[#64568a] text-white clay-button-active flex items-center justify-center min-w-[56px] min-h-[56px] active:scale-90">
-                <Icon name={playing ? "pause" : "play_arrow"} fill className="text-[28px]" />
+              <button onClick={() => play("cotton-candy-clouds")} aria-label="Play daily mix" className="w-14 h-14 rounded-full bg-[#64568a] text-white clay-button-active flex items-center justify-center min-w-[56px] min-h-[56px] active:scale-90">
+                <Icon name={current?.id === "cotton-candy-clouds" && playing ? "pause" : "play_arrow"} fill className="text-[28px]" />
               </button>
             </div>
             <p className="font-display font-bold text-[11px] text-[#64568a] mt-3 flex items-center gap-1">
