@@ -78,11 +78,6 @@ export function TopBar({ title, right }: { title: string; right?: React.ReactNod
         </div>
         <div className="flex items-center gap-2">
           <span className="font-display font-bold text-[12px] text-[#49454e]">{title}</span>
-          {right ?? (
-            <div className="w-8 h-8 rounded-full bg-[#64568a] flex items-center justify-center text-white">
-              <Icon name="person" className="text-[18px]" />
-            </div>
-          )}
         </div>
       </div>
     </header>

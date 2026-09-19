@@ -55,18 +55,7 @@ export default function OfflinePage() {
     <div className="bg-[#fff7ff] min-h-dvh max-w-[430px] mx-auto flex flex-col relative">
       <TopBar title="Offline" />
       <main className="flex-1 pt-16 pb-[180px] px-5 flex flex-col gap-4">
-        <div className="w-full bg-[#c9e6ff] rounded-2xl p-4 clay-card flex items-center gap-4 mt-3">
-          <div className="w-14 h-14 rounded-full bg-white clay-thumb flex items-center justify-center shrink-0">
-            <Icon name="cloud_download" className="text-[28px]" fill />
-          </div>
-          <div className="min-w-0">
-            <div className="flex items-center gap-2">
-              <span className="font-display font-bold text-[18px]">Cozy Haven</span>
-              <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-[#306385] text-white">Active</span>
-            </div>
-            <p className="text-[14px] font-medium">You&apos;re offline, but your saved songs are here!</p>
-          </div>
-        </div>
+        <div className="pt-3" />
 
         <div className="w-full bg-[#fbf0ff] rounded-2xl p-4 clay-card flex flex-col gap-2">
           <div className="flex items-center justify-between">

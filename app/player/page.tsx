@@ -157,9 +157,6 @@ export default function PlayerPage() {
             <Link href="/" aria-label="Back" className="w-11 h-11 rounded-full bg-[#f6e9ff] clay-card flex items-center justify-center min-w-[44px]">‹</Link>
             <h1 className="font-display font-bold text-[18px]">Now Playing</h1>
           </div>
-          <div className="w-8 h-8 rounded-full bg-[#64568a] flex items-center justify-center text-white">
-            <Icon name="person" className="text-[18px]" />
-          </div>
         </div>
       </header>
 

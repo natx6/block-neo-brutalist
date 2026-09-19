@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { BottomNav, MiniPlayer, Icon } from "./components/Nav";
 import { recentTracks, type SavedTrack } from "../lib/db";
 import { loadSettings, saveFileTracks, storeSettings } from "../lib/downloads";
@@ -16,11 +15,9 @@ const MOODS = [
 ];
 
 export default function Home() {
-  const [query, setQuery] = useState("");
   const [sleepOn, setSleepOn] = useState(true);
   const [recent, setRecent] = useState<SavedTrack[]>([]);
   const [importStatus, setImportStatus] = useState("");
-  const router = useRouter();
   const fileRef = useRef<HTMLInputElement>(null);
   const { current, playing, play } = usePlayer();
 
@@ -63,11 +60,6 @@ export default function Home() {
     if (fileRef.current) fileRef.current.value = "";
   };
 
-  const submitSearch = (e: React.FormEvent) => {
-    e.preventDefault();
-    router.push("/search");
-  };
-
   return (
     <div className="bg-[#fff7ff] min-h-dvh max-w-[430px] mx-auto flex flex-col relative">
       <header className="fixed top-0 inset-x-0 z-50 pt-safe bg-[#fff7ff]/80 backdrop-blur-xl">
@@ -82,49 +74,16 @@ export default function Home() {
             <Link href="/settings" aria-label="Settings" className="w-11 h-11 rounded-full bg-[#f6e9ff] clay-card flex items-center justify-center text-[#64568a] min-w-[44px]">
               <Icon name="settings" />
             </Link>
-            <div className="w-8 h-8 rounded-full bg-[#64568a] flex items-center justify-center text-white">
-              <Icon name="person" className="text-[18px]" />
-            </div>
           </div>
         </div>
       </header>
 
       <main className="flex-1 pt-16 pb-[180px]">
-        <div className="px-5 pt-3 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="relative w-12 h-12 rounded-full bg-[#d5c4ff] clay-card flex items-center justify-center text-[#4c3f70]">
-              <Icon name="cloud" fill className="text-[26px]" />
-              <span className="absolute -top-1 -right-1 flex h-3 w-3">
-                <span className="animate-ping absolute h-full w-full rounded-full bg-[#ffbbc2] opacity-75" />
-                <span className="relative rounded-full h-2.5 w-2.5 bg-[#944652]" />
-              </span>
-            </div>
-            <div>
-              <p className="font-display font-bold text-[18px]">Good afternoon</p>
-              <p className="text-[12px] text-[#49454e] font-medium">Sweet Pea&apos;s Sanctuary</p>
-            </div>
+        <div className="px-5 pt-3">
+          <div>
+            <p className="font-display font-bold text-[18px]">Good afternoon</p>
+            <p className="text-[12px] text-[#49454e] font-medium">Sweet Pea&apos;s Sanctuary</p>
           </div>
-          <button aria-label="Notifications" className="w-11 h-11 rounded-full bg-[#f6e9ff] clay-card flex items-center justify-center text-[#64568a] min-w-[44px] min-h-[44px]">
-            <Icon name="notifications_active" />
-          </button>
-        </div>
-
-        <div className="px-5 mt-4">
-          <form onSubmit={submitSearch} className="flex items-center w-full h-[52px] rounded-full bg-[#fbf0ff] px-4 shadow-[inset_2px_2px_5px_rgba(74,59,92,0.12),inset_-2px_-2px_6px_rgba(255,255,255,0.9)]">
-            <div className="w-8 h-8 rounded-full bg-[#a6d7fe] flex items-center justify-center shrink-0 text-[#2b5e80]">
-              <Icon name="search" className="text-[18px]" />
-            </div>
-            <input
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Find dreamy tunes, sleepy beats..."
-              aria-label="Search"
-              className="w-full bg-transparent pl-3 text-[14px] font-medium focus:outline-none placeholder:text-[#7a757f] min-w-0"
-            />
-            <button type="submit" aria-label="Search" className="text-[#49454e] min-w-[44px] min-h-[44px] flex items-center justify-center">
-              <Icon name="arrow_forward" />
-            </button>
-          </form>
         </div>
 
         <div className="mt-6">
