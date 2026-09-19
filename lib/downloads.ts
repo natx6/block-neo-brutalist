@@ -1,5 +1,5 @@
 import { db } from "./db";
-import { CATALOG } from "./catalog";
+import { ART_FALLBACKS, cleanFileTitle } from "./catalog";
 
 export async function downloadWithProgress(
   url: string,
@@ -21,19 +21,74 @@ export async function downloadWithProgress(
   return new Blob(chunks, { type: res.headers.get("content-type") || "audio/mpeg" });
 }
 
-export async function saveCatalogTrack(id: string, quality = "Good", onProgress?: (pct: number) => void) {
-  const meta = CATALOG.find((t) => t.id === id);
-  if (!meta) throw new Error("unknown track");
-  const existing = await db.tracks.get(id);
-  if (existing) return existing;
-  const blob = await downloadWithProgress(meta.remoteUrl, (p) => onProgress?.(p));
+export function probeDuration(blob: Blob): Promise<number> {
+  return new Promise((resolve) => {
+    try {
+      const url = URL.createObjectURL(blob);
+      const a = new Audio();
+      a.preload = "metadata";
+      const done = (d: number) => {
+        URL.revokeObjectURL(url);
+        resolve(isFinite(d) && d > 0 ? Math.round(d) : 0);
+      };
+      a.onloadedmetadata = () => done(a.duration);
+      a.onerror = () => done(0);
+      a.src = url;
+      setTimeout(() => done(0), 8000);
+    } catch {
+      resolve(0);
+    }
+  });
+}
+
+function fallbackArt(index: number) {
+  return ART_FALLBACKS[index % ART_FALLBACKS.length];
+}
+
+export async function saveFileTracks(files: FileList | File[], quality = "Good") {
+  const arr = Array.from(files).filter((f) => f.type.startsWith("audio/") || /\.(mp3|m4a|wav|ogg|flac|aac)$/i.test(f.name));
+  const saved = [];
+  for (let i = 0; i < arr.length; i++) {
+    const f = arr[i];
+    const { title, artist } = cleanFileTitle(f.name);
+    const durationSec = await probeDuration(f);
+    const art = fallbackArt(Date.now() % 1000 + i);
+    const rec = {
+      id: typeof crypto !== "undefined" && "randomUUID" in crypto ? crypto.randomUUID() : `${Date.now()}-${i}`,
+      title,
+      artist,
+      durationSec,
+      icon: art.icon,
+      bg: art.bg,
+      blob: f,
+      mime: f.type || "audio/mpeg",
+      size: f.size,
+      quality,
+      addedAt: Date.now() + i,
+      playCount: 0,
+    };
+    await db.tracks.put(rec);
+    saved.push(rec);
+  }
+  return saved;
+}
+
+export async function saveUrlTrack(url: string, quality = "Good", onProgress?: (pct: number) => void) {
+  const name = decodeURIComponent(url.split("?")[0].split("/").pop() || "link-audio");
+  const { title, artist } = cleanFileTitle(name);
+  const blob = await downloadWithProgress(url, (p) => onProgress?.(p));
+  if (!(blob.type.startsWith("audio/") || blob.size > 1024)) {
+    throw new Error("That link did not return audio");
+  }
+  const durationSec = await probeDuration(blob);
+  const art = fallbackArt(Date.now() % 1000);
   const rec = {
-    id: meta.id,
-    title: meta.title,
-    artist: meta.artist,
-    durationSec: meta.durationSec,
-    icon: meta.icon,
-    bg: meta.bg,
+    id: typeof crypto !== "undefined" && "randomUUID" in crypto ? crypto.randomUUID() : `${Date.now()}`,
+    title,
+    artist,
+    durationSec,
+    icon: art.icon,
+    bg: art.bg,
     blob,
     mime: blob.type || "audio/mpeg",
     size: blob.size,

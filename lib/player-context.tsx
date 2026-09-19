@@ -1,18 +1,26 @@
 "use client";
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
-import { db } from "./db";
-import { CATALOG, type CatalogTrack } from "./catalog";
+import { db, type SavedTrack } from "./db";
 import { loadSettings } from "./downloads";
 
+export interface NowPlaying {
+  id: string;
+  title: string;
+  artist: string;
+  durationSec: number;
+  icon: string;
+  bg: string;
+}
+
 interface PlayerState {
-  current: CatalogTrack | null;
+  current: NowPlaying | null;
   playing: boolean;
   currentTime: number;
   duration: number;
-  objectUrl: string | null;
   offlineMode: boolean;
   play: (id: string) => Promise<void>;
+  playList: (ids: string[], startIdx?: number) => Promise<void>;
   toggle: () => void;
   seek: (sec: number) => void;
   next: () => void;
@@ -28,14 +36,23 @@ export function usePlayer(): PlayerState {
   return p;
 }
 
+async function orderedIds(): Promise<string[]> {
+  try {
+    const all = await db.tracks.orderBy("addedAt").toArray();
+    return all.map((t) => t.id);
+  } catch {
+    return [];
+  }
+}
+
 export function PlayerProvider({ children }: { children: React.ReactNode }) {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const urlRef = useRef<string | null>(null);
-  const [current, setCurrent] = useState<CatalogTrack | null>(null);
+  const queueRef = useRef<string[]>([]);
+  const [current, setCurrent] = useState<NowPlaying | null>(null);
   const [playing, setPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
-  const [objectUrl, setObjectUrl] = useState<string | null>(null);
   const [offlineMode, setOfflineModeState] = useState(false);
   const sleepTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -62,7 +79,6 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
         navigator.mediaSession.setActionHandler("pause", () => a.pause());
       } catch {}
     }
-    // Sleep timer: 30 min fade-out stop
     try {
       const s = loadSettings();
       if (s.sleepOn) {
@@ -82,57 +98,73 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     };
   }, []);
 
-  const setSrc = useCallback((url: string) => {
+  const playId = useCallback(async (id: string) => {
+    const saved: SavedTrack | undefined = await db.tracks.get(id).catch(() => undefined);
+    if (!saved) return;
     if (urlRef.current) URL.revokeObjectURL(urlRef.current);
-    urlRef.current = url.startsWith("blob:") ? url : null;
-    setObjectUrl(url);
+    const url = URL.createObjectURL(saved.blob);
+    urlRef.current = url;
     if (audioRef.current) {
       audioRef.current.src = url;
       audioRef.current.currentTime = 0;
+    }
+    setCurrent({
+      id: saved.id,
+      title: saved.title,
+      artist: saved.artist,
+      durationSec: saved.durationSec,
+      icon: saved.icon,
+      bg: saved.bg,
+    });
+    setDuration(saved.durationSec || 0);
+    try {
+      await audioRef.current?.play();
+    } catch {}
+    await db.tracks.update(id, { playCount: (saved.playCount || 0) + 1, lastPlayedAt: Date.now() }).catch(() => {});
+    if ("mediaSession" in navigator) {
+      try {
+        navigator.mediaSession.metadata = new MediaMetadata({
+          title: saved.title,
+          artist: saved.artist,
+          album: "Puff",
+        });
+      } catch {}
     }
   }, []);
 
   const play = useCallback(
     async (id: string) => {
-      const meta = CATALOG.find((t) => t.id === id);
-      if (!meta) return;
-      setCurrent(meta);
-      // Prefer local blob when saved (offline-proof), else stream remote.
-      const saved = await db.tracks.get(id).catch(() => undefined);
-      const url = saved ? URL.createObjectURL(saved.blob) : meta.remoteUrl;
-      setSrc(url);
-      try {
-        await audioRef.current?.play();
-      } catch {}
-      if (saved) {
-        await db.tracks.update(id, { playCount: (saved.playCount || 0) + 1 }).catch(() => {});
-      }
-      if ("mediaSession" in navigator) {
-        try {
-          navigator.mediaSession.metadata = new MediaMetadata({
-            title: meta.title,
-            artist: meta.artist,
-            album: "Puff",
-          });
-        } catch {}
-      }
+      queueRef.current = await orderedIds();
+      await playId(id);
     },
-    [setSrc]
+    [playId]
   );
 
-  const toggle = useCallback(() => {
+  const playList = useCallback(
+    async (ids: string[], startIdx = 0) => {
+      if (!ids.length) return;
+      queueRef.current = ids;
+      await playId(ids[Math.max(0, Math.min(startIdx, ids.length - 1))]);
+    },
+    [playId]
+  );
+
+  const toggle = useCallback(async () => {
     const a = audioRef.current;
     if (!a) return;
     if (a.paused) {
-      if (!a.src && CATALOG[0]) {
-        play(CATALOG[0].id);
+      if (!a.src) {
+        const ids = queueRef.current.length ? queueRef.current : await orderedIds();
+        if (!ids.length) return;
+        queueRef.current = ids;
+        await playId(ids[ids.length - 1]);
         return;
       }
       a.play().catch(() => {});
     } else {
       a.pause();
     }
-  }, [play]);
+  }, [playId]);
 
   const seek = useCallback((sec: number) => {
     const a = audioRef.current;
@@ -143,16 +175,19 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const step = useCallback(
-    (dir: 1 | -1) => {
+    async (dir: 1 | -1) => {
+      const ids = queueRef.current.length ? queueRef.current : await orderedIds();
+      if (!ids.length) return;
+      queueRef.current = ids;
       if (!current) {
-        play(CATALOG[0].id);
+        await playId(ids[0]);
         return;
       }
-      const i = CATALOG.findIndex((t) => t.id === current.id);
-      const n = CATALOG[(i + dir + CATALOG.length) % CATALOG.length];
-      play(n.id);
+      const i = ids.indexOf(current.id);
+      const n = ids[(i < 0 ? 0 : i + dir + ids.length) % ids.length];
+      await playId(n);
     },
-    [current, play]
+    [current, playId]
   );
 
   const setOfflineMode = useCallback((v: boolean) => {
@@ -169,16 +204,16 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
       playing,
       currentTime,
       duration: duration || current?.durationSec || 0,
-      objectUrl,
       offlineMode,
       play,
+      playList,
       toggle,
       seek,
       next: () => step(1),
       prev: () => step(-1),
       setOfflineMode,
     }),
-    [current, playing, currentTime, duration, objectUrl, offlineMode, play, toggle, seek, step, setOfflineMode]
+    [current, playing, currentTime, duration, offlineMode, play, playList, toggle, seek, step, setOfflineMode]
   );
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;

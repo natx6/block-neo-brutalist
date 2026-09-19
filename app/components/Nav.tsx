@@ -11,8 +11,8 @@ export function Icon({ name, fill = false, className = "" }: { name: string; fil
 export function MiniPlayer() {
   const { current, playing, toggle } = usePlayer();
   const [liked, setLiked] = useState(false);
-  const title = current?.title ?? "Cotton Candy Clouds";
-  const artist = current?.artist ?? "Lofi Pillow";
+  const title = current?.title ?? "Nothing playing";
+  const artist = current?.artist ?? "Import tunes to begin";
   return (
     <aside className="fixed inset-x-0 z-40 px-5 pointer-events-none" style={{ bottom: "calc(5.5rem + env(safe-area-inset-bottom, 0px))" }}>
       <div className="pointer-events-auto mx-auto max-w-[390px] h-[64px] bg-white/95 rounded-full px-3 flex items-center justify-between clay-pill">

@@ -1,13 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { BottomNav, MiniPlayer, Icon } from "./components/Nav";
-import { CATALOG } from "../lib/catalog";
+import { recentTracks, type SavedTrack } from "../lib/db";
+import { loadSettings, saveFileTracks, storeSettings } from "../lib/downloads";
 import { usePlayer } from "../lib/player-context";
-
-const RECENT_IDS = ["marshmallow-sunset", "boba-rain", "lavender-fields", "starlight-hug"];
-const RECENT = RECENT_IDS.map((id) => CATALOG.find((t) => t.id === id)!).filter(Boolean);
 
 const MOODS = [
   { title: "Happy", sub: "Sun-kissed beats", bg: "bg-[#FFF2B2]", dot: "bg-[#FFE580]", text: "text-[#574400]", subText: "text-[#7A6000]", icon: "sunny" },
@@ -19,7 +18,49 @@ const MOODS = [
 export default function Home() {
   const [query, setQuery] = useState("");
   const [sleepOn, setSleepOn] = useState(true);
-  const { current, playing, play, toggle } = usePlayer();
+  const [recent, setRecent] = useState<SavedTrack[]>([]);
+  const router = useRouter();
+  const fileRef = useRef<HTMLInputElement>(null);
+  const { current, playing, play } = usePlayer();
+
+  const refresh = useCallback(async () => {
+    try {
+      setRecent(await recentTracks(4));
+    } catch {}
+  }, []);
+
+  useEffect(() => {
+    try {
+      setSleepOn(loadSettings().sleepOn);
+    } catch {}
+    refresh();
+    const onFocus = () => refresh();
+    window.addEventListener("focus", onFocus);
+    return () => window.removeEventListener("focus", onFocus);
+  }, [refresh]);
+
+  const toggleSleep = () => {
+    const next = !sleepOn;
+    setSleepOn(next);
+    try {
+      const s = loadSettings();
+      storeSettings({ ...s, sleepOn: next });
+    } catch {}
+  };
+
+  const handleFiles = async (files: FileList | null) => {
+    if (!files || files.length === 0) return;
+    try {
+      await saveFileTracks(files, loadSettings().quality);
+      await refresh();
+    } catch {}
+    if (fileRef.current) fileRef.current.value = "";
+  };
+
+  const submitSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    router.push("/search");
+  };
 
   return (
     <div className="bg-[#fff7ff] min-h-dvh max-w-[430px] mx-auto flex flex-col relative">
@@ -43,7 +84,6 @@ export default function Home() {
       </header>
 
       <main className="flex-1 pt-16 pb-[180px]">
-        {/* Greeting — no emoji, clean */}
         <div className="px-5 pt-3 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="relative w-12 h-12 rounded-full bg-[#d5c4ff] clay-card flex items-center justify-center text-[#4c3f70]">
@@ -63,9 +103,8 @@ export default function Home() {
           </button>
         </div>
 
-        {/* Search */}
         <div className="px-5 mt-4">
-          <div className="flex items-center w-full h-[52px] rounded-full bg-[#fbf0ff] px-4 shadow-[inset_2px_2px_5px_rgba(74,59,92,0.12),inset_-2px_-2px_6px_rgba(255,255,255,0.9)]">
+          <form onSubmit={submitSearch} className="flex items-center w-full h-[52px] rounded-full bg-[#fbf0ff] px-4 shadow-[inset_2px_2px_5px_rgba(74,59,92,0.12),inset_-2px_-2px_6px_rgba(255,255,255,0.9)]">
             <div className="w-8 h-8 rounded-full bg-[#a6d7fe] flex items-center justify-center shrink-0 text-[#2b5e80]">
               <Icon name="search" className="text-[18px]" />
             </div>
@@ -73,65 +112,90 @@ export default function Home() {
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Find dreamy tunes, sleepy beats..."
+              aria-label="Search"
               className="w-full bg-transparent pl-3 text-[14px] font-medium focus:outline-none placeholder:text-[#7a757f] min-w-0"
             />
-            <button aria-label="Voice search" className="text-[#49454e] min-w-[44px] min-h-[44px] flex items-center justify-center">
-              <Icon name="mic" />
+            <button type="submit" aria-label="Search" className="text-[#49454e] min-w-[44px] min-h-[44px] flex items-center justify-center">
+              <Icon name="arrow_forward" />
             </button>
-          </div>
+          </form>
         </div>
 
-        {/* Recently played */}
         <div className="mt-6">
           <div className="px-5 flex items-center justify-between mb-2">
             <p className="font-display font-bold text-[22px]">Recently Played</p>
             <Link href="/library" className="font-display font-bold text-[12px] text-[#64568a] min-h-[44px] flex items-center">See all</Link>
           </div>
-          <div className="flex gap-4 overflow-x-auto px-5 pb-3 pt-1 no-scrollbar">
-            {RECENT.map((r) => {
-              const isCurrent = current?.id === r.id && playing;
-              return (
-              <button key={r.id} onClick={() => play(r.id)} className="flex flex-col gap-2 shrink-0 w-[140px] text-left active:scale-95 transition-transform">
-                <div className="relative w-[140px] h-[140px] rounded-[28px] p-2 clay-card flex items-center justify-center" style={{ background: r.bg }}>
-                  <div className="w-full h-full rounded-[20px] bg-white/70 flex items-center justify-center text-[#4c3f70]">
-                    <Icon name={r.icon} fill className="text-[56px]" />
-                  </div>
-                  <div className="absolute bottom-3 right-3 w-9 h-9 rounded-full bg-[#64568a] clay-thumb flex items-center justify-center text-white">
-                    <Icon name={isCurrent ? "pause" : "play_arrow"} fill className="text-[20px]" />
-                  </div>
+          {recent.length === 0 ? (
+            <div className="px-5">
+              <div className="w-full bg-white p-6 rounded-2xl clay-card flex flex-col items-center text-center">
+                <div className="w-14 h-14 rounded-full bg-[#d5c4ff] clay-thumb flex items-center justify-center text-[#4c3f70] mb-2">
+                  <Icon name="cloud" fill className="text-[28px]" />
                 </div>
-                <div className="px-1">
-                  <p className="font-display font-bold text-[14px] truncate">{r.title}</p>
-                  <p className="text-[12px] text-[#49454e] truncate">{r.artist}</p>
-                </div>
-              </button>
-              );
-            })}
-          </div>
+                <p className="font-display font-bold text-[18px]">Your stash is empty</p>
+                <p className="text-[13px] text-[#49454e] mt-1">Import audio from your device and it will live here.</p>
+                <Link href="/search" className="mt-3 h-11 px-6 rounded-full bg-[#64568a] text-white font-display font-bold text-[14px] clay-button-active flex items-center min-h-[44px]">
+                  Add music
+                </Link>
+              </div>
+            </div>
+          ) : (
+            <div className="flex gap-4 overflow-x-auto px-5 pb-3 pt-1 no-scrollbar">
+              {recent.map((t) => {
+                const isCurrent = current?.id === t.id && playing;
+                return (
+                  <button key={t.id} onClick={() => play(t.id)} className="flex flex-col gap-2 shrink-0 w-[140px] text-left active:scale-95 transition-transform">
+                    <div className="relative w-[140px] h-[140px] rounded-[28px] p-2 clay-card flex items-center justify-center" style={{ background: t.bg }}>
+                      <div className="w-full h-full rounded-[20px] bg-white/70 flex items-center justify-center text-[#4c3f70]">
+                        <Icon name={t.icon} fill className="text-[56px]" />
+                      </div>
+                      <div className="absolute bottom-3 right-3 w-9 h-9 rounded-full bg-[#64568a] clay-thumb flex items-center justify-center text-white">
+                        <Icon name={isCurrent ? "pause" : "play_arrow"} fill className="text-[20px]" />
+                      </div>
+                    </div>
+                    <div className="px-1">
+                      <p className="font-display font-bold text-[14px] truncate">{t.title}</p>
+                      <p className="text-[12px] text-[#49454e] truncate">{t.artist}</p>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          )}
         </div>
 
-        {/* Daily mix */}
         <div className="px-5 mt-4">
           <div className="rounded-2xl bg-gradient-to-br from-[#f6e9ff] to-[#eedbff] p-4 clay-card">
-            <div className="flex items-center justify-between">
-              <div className="max-w-[210px]">
-                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-[#ffd9dc] font-display font-bold text-[11px]">
-                  <Icon name="auto_awesome" className="text-[14px]" /> Daily Cozy Mix
-                </span>
-                <h3 className="font-display font-bold text-[18px] mt-1">Cloud Slumber &amp; Tea</h3>
-                <p className="text-[12px] text-[#49454e]">32 dreamy lo-fi acoustics • 1h 48m</p>
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 rounded-full bg-[#d5c4ff] clay-thumb flex items-center justify-center text-[#4c3f70] shrink-0">
+                <Icon name="library_music" fill />
               </div>
-              <button onClick={() => play("cotton-candy-clouds")} aria-label="Play daily mix" className="w-14 h-14 rounded-full bg-[#64568a] text-white clay-button-active flex items-center justify-center min-w-[56px] min-h-[56px] active:scale-90">
-                <Icon name={current?.id === "cotton-candy-clouds" && playing ? "pause" : "play_arrow"} fill className="text-[28px]" />
-              </button>
+              <div>
+                <h3 className="font-display font-bold text-[18px]">Add music</h3>
+                <p className="text-[12px] text-[#49454e]">Import files or paste a link to grow your stash.</p>
+              </div>
             </div>
-            <p className="font-display font-bold text-[11px] text-[#64568a] mt-3 flex items-center gap-1">
-              <Icon name="fiber_manual_record" className="text-[10px]" /> Freshly brewed for you
-            </p>
+            <div className="grid grid-cols-2 gap-2 mt-3">
+              <label className="h-12 rounded-full bg-[#64568a] text-white font-display font-bold text-[14px] clay-button-active flex items-center justify-center gap-1.5 cursor-pointer min-h-[48px]">
+                <Icon name="upload" className="text-[20px]" />
+                From device
+                <input
+                  ref={fileRef}
+                  type="file"
+                  accept="audio/*"
+                  multiple
+                  className="hidden"
+                  onChange={(e) => handleFiles(e.target.files)}
+                />
+              </label>
+              <Link href="/search" className="h-12 rounded-full bg-white font-display font-bold text-[14px] clay-card flex items-center justify-center gap-1.5 min-h-[48px]">
+                <Icon name="link" className="text-[20px]" />
+                Paste a link
+              </Link>
+            </div>
           </div>
         </div>
 
-        {/* Moods */}
         <div className="px-5 mt-6">
           <div className="flex items-center justify-between mb-2">
             <p className="font-display font-bold text-[22px]">Moods &amp; Vibes</p>
@@ -155,7 +219,6 @@ export default function Home() {
           </div>
         </div>
 
-        {/* Sleep timer */}
         <div className="px-5 mt-4">
           <div className="p-4 rounded-2xl bg-white clay-card flex items-center justify-between">
             <div className="flex items-center gap-3">
@@ -168,7 +231,7 @@ export default function Home() {
               </div>
             </div>
             <button
-              onClick={() => setSleepOn(!sleepOn)}
+              onClick={toggleSleep}
               className={`w-12 h-7 rounded-full p-0.5 relative min-w-[48px] ${sleepOn ? "bg-[#d5c4ff]" : "bg-[#eedbff]"}`}
               aria-checked={sleepOn}
               role="switch"
