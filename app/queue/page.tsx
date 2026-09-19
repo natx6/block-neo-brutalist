@@ -22,17 +22,17 @@ export default function QueuePage() {
 
   return (
     <div className="bg-[#231534]/40 min-h-dvh max-w-[430px] mx-auto flex flex-col justify-end relative">
-      <div className="bg-[#fff7ff] rounded-t-[32px] clay-card p-5 pb-10 min-h-[70dvh]">
-        <div className="w-12 h-1.5 rounded-full bg-[#eedbff] mx-auto mb-4" />
+      <div className="t-bg rounded-t-[32px] clay-card p-5 pb-10 min-h-[70dvh]">
+        <div className="w-12 h-1.5 rounded-full t-variant mx-auto mb-4" />
         <div className="flex items-center justify-between mb-3">
           <h2 className="font-display font-bold text-[20px]">Queue</h2>
-          <Link href="/player" aria-label="Close queue" className="w-10 h-10 rounded-full bg-[#f6e9ff] clay-thumb flex items-center justify-center min-w-[44px]">
+          <Link href="/player" aria-label="Close queue" className="w-10 h-10 rounded-full t-container clay-thumb flex items-center justify-center min-w-[44px]">
             <Icon name="close" className="text-[20px]" />
           </Link>
         </div>
-        <p className="font-display font-bold text-[12px] uppercase text-[#64568a]">Now playing</p>
+        <p className="font-display font-bold text-[12px] uppercase t-primary-text">Now playing</p>
         {current ? (
-          <div className="bg-white rounded-2xl p-3 clay-card flex items-center gap-3 mt-2 mb-4">
+          <div className="t-card rounded-2xl p-3 clay-card flex items-center gap-3 mt-2 mb-4">
             <div className="w-12 h-12 rounded-2xl flex items-center justify-center" style={{ background: current.bg }}>
               <Icon name={current.icon} className="text-[24px]" fill />
             </div>
@@ -40,23 +40,23 @@ export default function QueuePage() {
               <p className="font-display font-bold truncate">{current.title}</p>
               <p className="text-[12px] truncate">{current.artist} • {fmtTime(currentTime)} / {fmtTime(duration)}</p>
             </div>
-            <span className="text-[#306385] flex items-center">
+            <span className="t-secondary-text flex items-center">
               <Icon name={playing ? "pause" : "fiber_manual_record"} className="text-[20px]" />
             </span>
           </div>
         ) : (
-          <div className="bg-white rounded-2xl p-5 clay-card flex flex-col items-center text-center mt-2 mb-4">
+          <div className="t-card rounded-2xl p-5 clay-card flex flex-col items-center text-center mt-2 mb-4">
             <p className="font-display font-bold text-[16px]">Nothing playing</p>
-            <Link href="/" className="mt-2 font-display font-bold text-[13px] text-[#64568a]">Pick something from Home</Link>
+            <Link href="/" className="mt-2 font-display font-bold text-[13px] t-primary-text">Pick something from Home</Link>
           </div>
         )}
-        <p className="font-display font-bold text-[12px] uppercase text-[#49454e]">Up next</p>
+        <p className="font-display font-bold text-[12px] uppercase t-muted">Up next</p>
         <div className="flex flex-col gap-2 mt-2">
           {upNext.length === 0 ? (
-            <p className="text-[13px] text-[#49454e]">Your queue is empty.</p>
+            <p className="text-[13px] t-muted">Your queue is empty.</p>
           ) : (
             upNext.map((t) => (
-              <button key={t.id} onClick={() => play(t.id)} className="bg-[#fbf0ff] rounded-2xl p-3 flex items-center gap-3 text-left">
+              <button key={t.id} onClick={() => play(t.id)} className="t-surface rounded-2xl p-3 flex items-center gap-3 text-left">
                 <div className="w-11 h-11 rounded-2xl bg-white flex items-center justify-center" style={{ background: t.bg }}>
                   <Icon name={t.icon} className="text-[22px]" />
                 </div>

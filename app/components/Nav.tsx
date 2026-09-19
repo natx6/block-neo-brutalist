@@ -15,21 +15,21 @@ export function MiniPlayer() {
   const artist = current?.artist ?? "Import tunes to begin";
   return (
     <aside className="fixed inset-x-0 z-40 px-5 pointer-events-none" style={{ bottom: "calc(5.5rem + env(safe-area-inset-bottom, 0px))" }}>
-      <div className="pointer-events-auto mx-auto max-w-[390px] h-[64px] bg-white/95 rounded-full px-3 flex items-center justify-between clay-pill">
+      <div className="pointer-events-auto mx-auto max-w-[390px] h-[64px] t-card-95 rounded-full px-3 flex items-center justify-between clay-pill">
         <Link href="/player" className="flex items-center gap-3 min-w-0 flex-1">
-          <div className="w-11 h-11 rounded-full bg-[#d5c4ff] clay-thumb flex items-center justify-center shrink-0 text-[#4c3f70]">
+          <div className="w-11 h-11 rounded-full t-primary-ct clay-thumb flex items-center justify-center shrink-0">
             <Icon name="music_note" />
           </div>
           <div className="min-w-0 flex-1">
             <p className="font-display font-bold text-[14px] truncate">{title}</p>
-            <p className="text-[11px] text-[#944652] truncate font-bold">{artist}</p>
+            <p className="text-[11px] t-tertiary-text truncate font-bold">{artist}</p>
           </div>
         </Link>
         <div className="flex items-center gap-1 shrink-0">
-          <button onClick={() => setLiked(!liked)} aria-label="Favorite" className="w-11 h-11 flex items-center justify-center min-w-[44px] min-h-[44px] text-[#49454e]">
+          <button onClick={() => setLiked(!liked)} aria-label="Favorite" className="w-11 h-11 flex items-center justify-center min-w-[44px] min-h-[44px] t-muted">
             <Icon name="favorite" fill={liked} />
           </button>
-          <button onClick={toggle} aria-label="Play or Pause" className="w-11 h-11 rounded-full bg-[#64568a] text-white clay-button-active flex items-center justify-center min-w-[44px] min-h-[44px]">
+          <button onClick={toggle} aria-label="Play or Pause" className="w-11 h-11 rounded-full t-primary clay-button-active flex items-center justify-center min-w-[44px] min-h-[44px]">
             <Icon name={playing ? "pause" : "play_arrow"} fill />
           </button>
         </div>
@@ -48,13 +48,13 @@ const TABS = [
 export function BottomNav({ active }: { active: string }) {
   return (
     <nav className="fixed bottom-0 inset-x-0 z-50 pb-safe px-5 pointer-events-none">
-      <div className="pointer-events-auto mx-auto max-w-[390px] h-16 bg-white/90 rounded-full mb-2 px-2 flex items-center justify-around clay-pill">
+      <div className="pointer-events-auto mx-auto max-w-[390px] h-16 t-card-90 rounded-full mb-2 px-2 flex items-center justify-around clay-pill">
         {TABS.map((t) => (
           <Link
             key={t.id}
             href={t.href}
             className={`flex flex-col items-center justify-center w-14 h-12 rounded-full min-w-[56px] min-h-[48px] ${
-              active === t.id ? "bg-[#d5c4ff] clay-button-active font-bold text-[#201242]" : "text-[#49454e]"
+              active === t.id ? "t-primary-ct clay-button-active font-bold" : "t-muted"
             }`}
           >
             <Icon name={t.icon} fill={active === t.id} className="text-[22px]" />
@@ -68,16 +68,16 @@ export function BottomNav({ active }: { active: string }) {
 
 export function TopBar({ title, right }: { title: string; right?: React.ReactNode }) {
   return (
-    <header className="fixed top-0 inset-x-0 z-50 pt-safe bg-[#fff7ff]/80 backdrop-blur-xl">
+    <header className="fixed top-0 inset-x-0 z-50 pt-safe t-bg-80 backdrop-blur-xl">
       <div className="max-w-[430px] mx-auto h-16 px-5 flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <div className="w-9 h-9 rounded-2xl bg-[#d5c4ff] clay-thumb flex items-center justify-center text-[#4c3f70]">
+          <div className="w-9 h-9 rounded-2xl t-primary-ct clay-thumb flex items-center justify-center">
             <Icon name="cloud" fill />
           </div>
           <span className="font-display font-bold text-[22px]">Puff</span>
         </div>
         <div className="flex items-center gap-2">
-          <span className="font-display font-bold text-[12px] text-[#49454e]">{title}</span>
+          <span className="font-display font-bold text-[12px] t-muted">{title}</span>
         </div>
       </div>
     </header>

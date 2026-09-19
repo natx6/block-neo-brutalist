@@ -1,0 +1,35 @@
+export interface Theme {
+  id: string;
+  name: string;
+  desc: string;
+  swatches: [string, string, string];
+}
+
+export const THEMES: Theme[] = [
+  { id: "puff", name: "Puff", desc: "Soft pastel clay", swatches: ["#fff7ff", "#d5c4ff", "#a6d7fe"] },
+  { id: "midnight", name: "Midnight", desc: "Dark plum glow", swatches: ["#17121f", "#b79cff", "#8fd0ff"] },
+  { id: "matcha", name: "Matcha", desc: "Calm green cream", swatches: ["#f6f7ec", "#5c7a3f", "#3f7a6b"] },
+  { id: "sunset", name: "Sunset", desc: "Warm peach glow", swatches: ["#fff6f0", "#c25e3a", "#3a7d8c"] },
+  { id: "ocean", name: "Ocean", desc: "Deep sea fresh", swatches: ["#f2f8ff", "#2f6db3", "#3f9a8c"] },
+];
+
+const KEY = "puff-theme";
+
+export function loadTheme(): string {
+  if (typeof window === "undefined" || typeof localStorage === "undefined") return "puff";
+  try {
+    const v = localStorage.getItem(KEY);
+    if (v && THEMES.some((t) => t.id === v)) return v;
+  } catch {}
+  return "puff";
+}
+
+export function applyTheme(id: string): void {
+  const valid = THEMES.some((t) => t.id === id) ? id : "puff";
+  if (typeof document !== "undefined") {
+    document.documentElement.dataset.theme = valid;
+  }
+  try {
+    localStorage.setItem(KEY, valid);
+  } catch {}
+}

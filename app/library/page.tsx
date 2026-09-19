@@ -38,7 +38,7 @@ export default function LibraryPage() {
   };
 
   return (
-    <div className="bg-[#fff7ff] min-h-dvh max-w-[430px] mx-auto flex flex-col relative">
+    <div className="t-bg min-h-dvh max-w-[430px] mx-auto flex flex-col relative">
       <TopBar title="Library" />
       <main className="flex-1 pt-16 pb-[180px] px-5">
         <div className="flex gap-2 overflow-x-auto no-scrollbar py-3">
@@ -46,7 +46,7 @@ export default function LibraryPage() {
             <button
               key={t}
               onClick={() => setTab(i)}
-              className={`shrink-0 h-11 px-5 rounded-full font-display font-bold text-[14px] min-h-[44px] ${tab === i ? "bg-[#d5c4ff] clay-button-active" : "bg-white clay-card text-[#49454e]"}`}
+              className={`shrink-0 h-11 px-5 rounded-full font-display font-bold text-[14px] min-h-[44px] ${tab === i ? "t-primary-ct clay-button-active" : "t-card clay-card t-muted"}`}
             >
               {t}
             </button>
@@ -55,20 +55,20 @@ export default function LibraryPage() {
 
         {tab === 0 ? (
           <div className="grid grid-cols-2 gap-3 mt-2">
-            <button onClick={handleNew} className="rounded-2xl bg-white clay-card p-6 flex flex-col items-center justify-center gap-2 min-h-[140px] border-2 border-dashed border-[#d5c4ff]">
-              <span className="w-12 h-12 rounded-full bg-[#d5c4ff] clay-thumb flex items-center justify-center">
+            <button onClick={handleNew} className="rounded-2xl t-card clay-card p-6 flex flex-col items-center justify-center gap-2 min-h-[140px] border-2 border-dashed border-[var(--primary-ct)]">
+              <span className="w-12 h-12 rounded-full t-primary-ct clay-thumb flex items-center justify-center">
                 <Icon name="add" className="text-[24px]" />
               </span>
               <span className="font-display font-bold text-[14px]">New playlist</span>
             </button>
             {playlists.length === 0 ? (
-              <div className="col-span-1 rounded-2xl bg-white clay-card p-6 flex flex-col items-center justify-center text-center min-h-[140px]">
+              <div className="col-span-1 rounded-2xl t-card clay-card p-6 flex flex-col items-center justify-center text-center min-h-[140px]">
                 <p className="font-display font-bold text-[14px]">No playlists yet</p>
-                <p className="text-[12px] text-[#49454e] mt-1">Create one to get started.</p>
+                <p className="text-[12px] t-muted mt-1">Create one to get started.</p>
               </div>
             ) : (
               playlists.map((p) => (
-                <Link key={p.id} href={`/playlist?id=${p.id}`} className="rounded-2xl clay-card p-3 min-h-[140px] flex flex-col justify-between bg-[#E9DCFF]">
+                <Link key={p.id} href={`/playlist?id=${p.id}`} className="rounded-2xl clay-card p-3 min-h-[140px] flex flex-col justify-between t-primary-ct">
                   <span className="flex">
                     <Icon name="queue_music" className="text-[48px]" />
                   </span>
@@ -78,13 +78,13 @@ export default function LibraryPage() {
             )}
           </div>
         ) : saved.length === 0 ? (
-          <div className="w-full bg-white p-6 rounded-2xl clay-card flex flex-col items-center text-center mt-2">
-            <div className="w-14 h-14 rounded-full bg-[#d5c4ff] clay-thumb flex items-center justify-center text-[#4c3f70] mb-2">
+          <div className="w-full t-card p-6 rounded-2xl clay-card flex flex-col items-center text-center mt-2">
+            <div className="w-14 h-14 rounded-full t-primary-ct clay-thumb flex items-center justify-center mb-2">
               <Icon name="cloud" fill className="text-[28px]" />
             </div>
             <p className="font-display font-bold text-[16px]">Nothing saved yet</p>
-            <p className="text-[13px] text-[#49454e] mt-1">Import audio and it will live here.</p>
-            <Link href="/search" className="mt-3 h-11 px-6 rounded-full bg-[#64568a] text-white font-display font-bold text-[14px] clay-button-active flex items-center min-h-[44px]">
+            <p className="text-[13px] t-muted mt-1">Import audio and it will live here.</p>
+            <Link href="/search" className="mt-3 h-11 px-6 rounded-full t-primary font-display font-bold text-[14px] clay-button-active flex items-center min-h-[44px]">
               Add music
             </Link>
           </div>
@@ -93,17 +93,17 @@ export default function LibraryPage() {
             {saved.map((t) => {
               const isCurrent = current?.id === t.id && playing;
               return (
-                <button key={t.id} onClick={() => play(t.id)} className="w-full bg-white p-3 rounded-2xl clay-card flex items-center justify-between gap-2 text-left">
+                <button key={t.id} onClick={() => play(t.id)} className="w-full t-card p-3 rounded-2xl clay-card flex items-center justify-between gap-2 text-left">
                   <div className="flex items-center gap-3 min-w-0 flex-1">
                     <div className="w-12 h-12 rounded-2xl clay-thumb flex items-center justify-center shrink-0" style={{ background: t.bg }}>
                       <Icon name={t.icon} className="text-[24px]" />
                     </div>
                     <div className="min-w-0 flex-1">
                       <p className="font-display font-bold text-[15px] truncate">{t.title}</p>
-                      <p className="text-[12px] text-[#49454e] truncate">{t.artist}</p>
+                      <p className="text-[12px] t-muted truncate">{t.artist}</p>
                     </div>
                   </div>
-                  <span className="w-10 h-10 rounded-full bg-[#d5c4ff] clay-thumb flex items-center justify-center shrink-0">
+                  <span className="w-10 h-10 rounded-full t-primary-ct clay-thumb flex items-center justify-center shrink-0">
                     <Icon name={isCurrent ? "pause" : "play_arrow"} fill className="text-[20px]" />
                   </span>
                 </button>

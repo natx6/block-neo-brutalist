@@ -17,9 +17,134 @@
   --font-body: "Nunito Sans", sans-serif;
 }
 
+:root {
+  --bg: #fff7ff;
+  --surface: #fbf0ff;
+  --card: #ffffff;
+  --container: #f6e9ff;
+  --variant: #eedbff;
+  --ink: #231534;
+  --muted: #49454e;
+  --primary: #64568a;
+  --on-primary: #ffffff;
+  --primary-ct: #d5c4ff;
+  --on-primary-ct: #201242;
+  --secondary: #306385;
+  --on-secondary: #ffffff;
+  --secondary-ct: #a6d7fe;
+  --on-secondary-ct: #001e2f;
+  --tertiary: #944652;
+  --on-tertiary: #ffffff;
+  --tertiary-ct: #ffbbc2;
+  --on-tertiary-ct: #3e0312;
+  --clay-hi: rgba(255, 255, 255, 0.85);
+  --clay-lo: rgba(74, 59, 92, 0.08);
+  --clay-drop: rgba(74, 59, 92, 0.12);
+}
+
+[data-theme="midnight"] {
+  --bg: #17121f;
+  --surface: #221a2e;
+  --card: #251d33;
+  --container: #2e2440;
+  --variant: #38304d;
+  --ink: #f5effc;
+  --muted: #b6a9c9;
+  --primary: #b79cff;
+  --on-primary: #241b3d;
+  --primary-ct: #3d2f5c;
+  --on-primary-ct: #e3d6ff;
+  --secondary: #8fd0ff;
+  --on-secondary: #0d2233;
+  --secondary-ct: #1d3a52;
+  --on-secondary-ct: #c9e6ff;
+  --tertiary: #ff9aa8;
+  --on-tertiary: #3d1220;
+  --tertiary-ct: #4a2230;
+  --on-tertiary-ct: #ffd9de;
+  --clay-hi: rgba(255, 255, 255, 0.10);
+  --clay-lo: rgba(0, 0, 0, 0.45);
+  --clay-drop: rgba(0, 0, 0, 0.5);
+}
+
+[data-theme="matcha"] {
+  --bg: #f6f7ec;
+  --surface: #eef1df;
+  --card: #ffffff;
+  --container: #e3e9cf;
+  --variant: #d4dcb8;
+  --ink: #26301c;
+  --muted: #5d6650;
+  --primary: #5c7a3f;
+  --on-primary: #ffffff;
+  --primary-ct: #d7e5bd;
+  --on-primary-ct: #243013;
+  --secondary: #3f7a6b;
+  --on-secondary: #ffffff;
+  --secondary-ct: #c4e3d8;
+  --on-secondary-ct: #12352c;
+  --tertiary: #b0563f;
+  --on-tertiary: #ffffff;
+  --tertiary-ct: #f3cfc0;
+  --on-tertiary-ct: #4a2418;
+  --clay-hi: rgba(255, 255, 255, 0.85);
+  --clay-lo: rgba(38, 48, 28, 0.10);
+  --clay-drop: rgba(38, 48, 28, 0.14);
+}
+
+[data-theme="sunset"] {
+  --bg: #fff6f0;
+  --surface: #ffeedd;
+  --card: #ffffff;
+  --container: #ffdfc7;
+  --variant: #f5cfae;
+  --ink: #3d2317;
+  --muted: #7a5c4b;
+  --primary: #c25e3a;
+  --on-primary: #ffffff;
+  --primary-ct: #ffd9c2;
+  --on-primary-ct: #4a2412;
+  --secondary: #3a7d8c;
+  --on-secondary: #ffffff;
+  --secondary-ct: #c2e6ee;
+  --on-secondary-ct: #12333b;
+  --tertiary: #944652;
+  --on-tertiary: #ffffff;
+  --tertiary-ct: #ffbbc2;
+  --on-tertiary-ct: #3e0312;
+  --clay-hi: rgba(255, 255, 255, 0.85);
+  --clay-lo: rgba(61, 35, 23, 0.10);
+  --clay-drop: rgba(61, 35, 23, 0.14);
+}
+
+[data-theme="ocean"] {
+  --bg: #f2f8ff;
+  --surface: #e4f0fc;
+  --card: #ffffff;
+  --container: #d3e6f8;
+  --variant: #bcd7f0;
+  --ink: #16293d;
+  --muted: #4e6478;
+  --primary: #2f6db3;
+  --on-primary: #ffffff;
+  --primary-ct: #c9e2fa;
+  --on-primary-ct: #102a45;
+  --secondary: #3f9a8c;
+  --on-secondary: #ffffff;
+  --secondary-ct: #c2e9e2;
+  --on-secondary-ct: #0f3530;
+  --tertiary: #b04a5e;
+  --on-tertiary: #ffffff;
+  --tertiary-ct: #f4c3cf;
+  --on-tertiary-ct: #471522;
+  --clay-hi: rgba(255, 255, 255, 0.85);
+  --clay-lo: rgba(22, 41, 61, 0.10);
+  --clay-drop: rgba(22, 41, 61, 0.14);
+}
+
 html, body {
-  background: #fff7ff;
-  color: #231534;
+  background: var(--bg);
+  color: var(--ink);
   font-family: "Nunito Sans", system-ui, sans-serif;
   -webkit-tap-highlight-color: transparent;
   overscroll-behavior-y: none;
@@ -28,24 +153,24 @@ html, body {
 .font-display { font-family: "Quicksand", sans-serif; }
 
 .clay-card {
-  box-shadow: inset 3px 3px 6px rgba(255,255,255,0.85),
-    inset -3px -3px 8px rgba(74,59,92,0.08),
-    0 10px 24px -4px rgba(74,59,92,0.12);
+  box-shadow: inset 3px 3px 6px var(--clay-hi),
+    inset -3px -3px 8px var(--clay-lo),
+    0 10px 24px -4px var(--clay-drop);
 }
 .clay-pill {
-  box-shadow: inset 2px 2px 4px rgba(255,255,255,0.9),
-    inset -2px -2px 6px rgba(74,59,92,0.08),
-    0 12px 28px -6px rgba(74,59,92,0.14);
+  box-shadow: inset 2px 2px 4px var(--clay-hi),
+    inset -2px -2px 6px var(--clay-lo),
+    0 12px 28px -6px var(--clay-drop);
 }
 .clay-thumb {
-  box-shadow: inset 2px 2px 4px rgba(255,255,255,0.8),
-    inset -2px -2px 4px rgba(74,59,92,0.15),
-    0 4px 8px rgba(74,59,92,0.15);
+  box-shadow: inset 2px 2px 4px var(--clay-hi),
+    inset -2px -2px 4px var(--clay-lo),
+    0 4px 8px var(--clay-drop);
 }
 .clay-button-active {
-  box-shadow: inset 2px 2px 5px rgba(255,255,255,0.9),
-    inset -2px -2px 6px rgba(74,59,92,0.12),
-    0 4px 10px rgba(100,86,138,0.22);
+  box-shadow: inset 2px 2px 5px var(--clay-hi),
+    inset -2px -2px 6px var(--clay-lo),
+    0 4px 10px rgba(100, 86, 138, 0.22);
 }
 
 .no-scrollbar::-webkit-scrollbar { display: none; }
@@ -53,6 +178,28 @@ html, body {
 
 .pt-safe { padding-top: env(safe-area-inset-top); }
 .pb-safe { padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 0.5rem); }
+
+.t-bg { background: var(--bg); }
+.t-bg-80 { background: color-mix(in srgb, var(--bg) 80%, transparent); }
+.t-surface { background: var(--surface); }
+.t-card { background: var(--card); }
+.t-card-90 { background: color-mix(in srgb, var(--card) 90%, transparent); }
+.t-card-95 { background: color-mix(in srgb, var(--card) 95%, transparent); }
+.t-container { background: var(--container); }
+.t-container-60 { background: color-mix(in srgb, var(--container) 60%, transparent); }
+.t-variant { background: var(--variant); }
+.t-variant-40 { background: color-mix(in srgb, var(--variant) 40%, transparent); }
+.t-ink { color: var(--ink); }
+.t-muted { color: var(--muted); }
+.t-primary { background: var(--primary); color: var(--on-primary); }
+.t-primary-ct { background: var(--primary-ct); color: var(--on-primary-ct); }
+.t-primary-text { color: var(--primary); }
+.t-secondary { background: var(--secondary); color: var(--on-secondary); }
+.t-secondary-ct { background: var(--secondary-ct); color: var(--on-secondary-ct); }
+.t-secondary-text { color: var(--secondary); }
+.t-tertiary { background: var(--tertiary); color: var(--on-tertiary); }
+.t-tertiary-ct { background: var(--tertiary-ct); color: var(--on-tertiary-ct); }
+.t-tertiary-text { color: var(--tertiary); }
 
 .material-symbols-outlined {
   font-family: "Material Symbols Outlined", sans-serif;

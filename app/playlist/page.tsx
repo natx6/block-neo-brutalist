@@ -62,45 +62,45 @@ function PlaylistInner() {
   };
 
   return (
-    <div className="bg-[#fff7ff] min-h-dvh max-w-[430px] mx-auto flex flex-col relative">
-      <header className="fixed top-0 inset-x-0 z-50 pt-safe bg-[#fff7ff]/80 backdrop-blur-xl">
+    <div className="t-bg min-h-dvh max-w-[430px] mx-auto flex flex-col relative">
+      <header className="fixed top-0 inset-x-0 z-50 pt-safe t-bg-80 backdrop-blur-xl">
         <div className="max-w-[430px] mx-auto h-16 px-5 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Link href="/library" className="w-11 h-11 rounded-full bg-[#f6e9ff] clay-card flex items-center justify-center min-w-[44px]">‹</Link>
+            <Link href="/library" className="w-11 h-11 rounded-full t-container clay-card flex items-center justify-center min-w-[44px]">‹</Link>
             <h1 className="font-display font-bold">Playlist</h1>
           </div>
-          <div className="w-8 h-8 rounded-full bg-[#64568a] flex items-center justify-center text-white">
+          <div className="w-8 h-8 rounded-full t-primary flex items-center justify-center">
             <Icon name="person" className="text-[18px]" />
           </div>
         </div>
       </header>
       <main className="flex-1 pt-20 pb-10 px-5 flex flex-col gap-4">
-        <div className="rounded-[28px] bg-gradient-to-br from-[#E9DCFF] to-[#D1EEFF] clay-card p-6 flex flex-col items-center text-center">
-          <div className="w-32 h-32 rounded-[24px] bg-white clay-card flex items-center justify-center">
+        <div className="rounded-[28px] bg-gradient-to-br from-[var(--primary-ct)] to-[var(--secondary-ct)] clay-card p-6 flex flex-col items-center text-center">
+          <div className="w-32 h-32 rounded-[24px] t-card clay-card flex items-center justify-center">
             <Icon name="cloud" className="text-[64px]" fill />
           </div>
           <h2 className="font-display font-bold text-[24px] mt-3">{title}</h2>
-          <p className="text-[13px] text-[#49454e]">{tracks.length} tunes</p>
+          <p className="text-[13px] t-muted">{tracks.length} tunes</p>
           <div className="flex items-center gap-2 mt-3">
             <span className="font-display font-bold text-[12px]">Save all</span>
-            <button onClick={() => setSaveAll(!saveAll)} role="switch" aria-checked={saveAll} className={`w-12 h-7 rounded-full p-0.5 ${saveAll ? "bg-[#d5c4ff]" : "bg-[#eedbff]"}`}>
+            <button onClick={() => setSaveAll(!saveAll)} role="switch" aria-checked={saveAll} className={`w-12 h-7 rounded-full p-0.5 ${saveAll ? "t-primary-ct" : "t-variant"}`}>
               <div className={`w-6 h-6 rounded-full bg-white clay-thumb transition-transform ${saveAll ? "translate-x-5" : ""}`} />
             </button>
           </div>
         </div>
         <div className="grid grid-cols-2 gap-3">
-          <button onClick={handlePlay} className="h-14 rounded-full bg-[#64568a] text-white font-display font-bold clay-button-active min-h-[56px] flex items-center justify-center gap-1.5">
+          <button onClick={handlePlay} className="h-14 rounded-full t-primary font-display font-bold clay-button-active min-h-[56px] flex items-center justify-center gap-1.5">
             <Icon name="play_arrow" fill /> PLAY
           </button>
-          <button onClick={handleShuffle} className="h-14 rounded-full bg-white font-display font-bold clay-card min-h-[56px] flex items-center justify-center gap-1.5">
+          <button onClick={handleShuffle} className="h-14 rounded-full t-card font-display font-bold clay-card min-h-[56px] flex items-center justify-center gap-1.5">
             <Icon name="shuffle" /> SHUFFLE
           </button>
         </div>
         {tracks.length === 0 ? (
-          <div className="w-full bg-white p-6 rounded-2xl clay-card flex flex-col items-center text-center">
+          <div className="w-full t-card p-6 rounded-2xl clay-card flex flex-col items-center text-center">
             <p className="font-display font-bold text-[16px]">No tracks here yet</p>
-            <p className="text-[13px] text-[#49454e] mt-1">Import audio from Search to fill your stash.</p>
-            <Link href="/search" className="mt-3 h-11 px-6 rounded-full bg-[#64568a] text-white font-display font-bold text-[14px] clay-button-active flex items-center min-h-[44px]">
+            <p className="text-[13px] t-muted mt-1">Import audio from Search to fill your stash.</p>
+            <Link href="/search" className="mt-3 h-11 px-6 rounded-full t-primary font-display font-bold text-[14px] clay-button-active flex items-center min-h-[44px]">
               Add music
             </Link>
           </div>
@@ -109,14 +109,14 @@ function PlaylistInner() {
             {tracks.map((s, i) => {
               const isCurrent = current?.id === s.id && playing;
               return (
-                <button key={s.id} onClick={() => play(s.id)} className="bg-white rounded-2xl p-3 clay-card flex items-center gap-3 text-left">
+                <button key={s.id} onClick={() => play(s.id)} className="t-card rounded-2xl p-3 clay-card flex items-center gap-3 text-left">
                   <span className="font-display font-bold text-[12px] w-5">{String(i + 1).padStart(2, "0")}</span>
-                  <div className="w-11 h-11 rounded-2xl bg-[#f6e9ff] flex items-center justify-center shrink-0" style={{ background: s.bg }}>
+                  <div className="w-11 h-11 rounded-2xl t-container flex items-center justify-center shrink-0" style={{ background: s.bg }}>
                     <Icon name={s.icon} className="text-[22px]" />
                   </div>
                   <div className="min-w-0 flex-1"><p className="font-display font-bold text-[14px] truncate">{s.title}</p><p className="text-[12px] truncate">{s.artist}</p></div>
                   <span className="text-[11px] font-bold">{fmtTime(s.durationSec)}</span>
-                  <span className="text-[#64568a] flex items-center">
+                  <span className="t-primary-text flex items-center">
                     <Icon name={isCurrent ? "pause" : "play_arrow"} fill className="text-[20px]" />
                   </span>
                 </button>

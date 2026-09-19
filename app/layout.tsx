@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Quicksand, Nunito_Sans } from "next/font/google";
 import "./globals.css";
 import { PlayerProvider } from "../lib/player-context";
+import ApplyTheme from "./components/ApplyTheme";
 
 const display = Quicksand({
   variable: "--font-display",
@@ -39,9 +40,17 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0..1,0&display=swap"
           rel="stylesheet"
         />
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `try{document.documentElement.dataset.theme=localStorage.getItem("puff-theme")||"puff"}catch{}`,
+          }}
+        />
       </head>
       <body className="min-h-dvh flex flex-col antialiased">
-        <PlayerProvider>{children}</PlayerProvider>
+        <PlayerProvider>
+          <ApplyTheme />
+          {children}
+        </PlayerProvider>
       </body>
     </html>
   );

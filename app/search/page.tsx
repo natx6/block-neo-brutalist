@@ -208,12 +208,12 @@ export default function SearchPage() {
   }));
 
   return (
-    <div className="bg-[#fff7ff] min-h-dvh max-w-[430px] mx-auto flex flex-col relative">
+    <div className="t-bg min-h-dvh max-w-[430px] mx-auto flex flex-col relative">
       <TopBar title="Search" />
       <main className="flex-1 pt-16 pb-[180px] px-5 flex flex-col gap-4">
         <div className="pt-3">
-          <div className="flex items-center w-full h-14 bg-white rounded-full px-4 clay-card">
-            <span className="text-[#64568a] mr-2 flex items-center">
+          <div className="flex items-center w-full h-14 t-card rounded-full px-4 clay-card">
+            <span className="t-primary-text mr-2 flex items-center">
               <Icon name="search" />
             </span>
             <input
@@ -223,18 +223,18 @@ export default function SearchPage() {
               aria-label="Search tracks"
               className="flex-1 bg-transparent font-display font-semibold text-[16px] focus:outline-none min-w-0"
             />
-            <button onClick={() => setQuery("")} aria-label="Clear search" className="w-10 h-10 rounded-full bg-[#f6e9ff] clay-thumb flex items-center justify-center min-w-[44px]">
+            <button onClick={() => setQuery("")} aria-label="Clear search" className="w-10 h-10 rounded-full t-container clay-thumb flex items-center justify-center min-w-[44px]">
               <Icon name="close" className="text-[18px]" />
             </button>
           </div>
         </div>
 
-        <div className="w-full bg-white p-4 rounded-2xl clay-card flex flex-col gap-3">
+        <div className="w-full t-card p-4 rounded-2xl clay-card flex flex-col gap-3">
           <p className="font-display font-bold text-[16px]">Add music</p>
           <button
             type="button"
             onClick={() => fileRef.current?.click()}
-            className="h-12 rounded-full bg-[#64568a] text-white font-display font-bold text-[14px] clay-button-active flex items-center justify-center gap-1.5 min-h-[48px]"
+            className="h-12 rounded-full t-primary font-display font-bold text-[14px] clay-button-active flex items-center justify-center gap-1.5 min-h-[48px]"
           >
             <Icon name="upload" className="text-[20px]" />
             Import from device
@@ -248,7 +248,7 @@ export default function SearchPage() {
             onChange={(e) => handleFiles(e.target.files)}
           />
           {importStatus && (
-            <p className="text-[12px] font-bold text-[#49454e]">{importStatus}</p>
+            <p className="text-[12px] font-bold t-muted">{importStatus}</p>
           )}
           <div className="flex gap-2">
             <input
@@ -256,16 +256,16 @@ export default function SearchPage() {
               onChange={(e) => setUrl(e.target.value)}
               placeholder="Paste an audio link..."
               aria-label="Audio link"
-              className="flex-1 h-12 rounded-full bg-[#fbf0ff] px-4 text-[14px] font-medium focus:outline-none min-w-0 shadow-[inset_2px_2px_5px_rgba(74,59,92,0.12)]"
+              className="flex-1 h-12 rounded-full t-surface px-4 text-[14px] font-medium focus:outline-none min-w-0 shadow-[inset_2px_2px_5px_rgba(74,59,92,0.12)]"
             />
             <button
               onClick={handleUrl}
               disabled={downloading || !url.trim()}
-              className="h-12 px-5 rounded-full bg-[#a6d7fe] font-display font-bold text-[14px] clay-thumb min-h-[48px] shrink-0 disabled:opacity-50 flex items-center gap-1.5"
+              className="h-12 px-5 rounded-full t-secondary-ct font-display font-bold text-[14px] clay-thumb min-h-[48px] shrink-0 disabled:opacity-50 flex items-center gap-1.5"
             >
               {downloading ? (
                 <span className="flex items-center gap-1.5">
-                  <span className="w-5 h-5 rounded-full border-2 border-[#306385] border-t-transparent animate-spin" />
+                  <span className="w-5 h-5 rounded-full border-2 border-[var(--secondary)] border-t-transparent animate-spin" />
                   {dlPct}%
                 </span>
               ) : (
@@ -278,7 +278,7 @@ export default function SearchPage() {
           </div>
           {downloading && (
             <div className="flex items-center gap-3">
-              <div className="relative w-11 h-11 rounded-full bg-[#f6e9ff] clay-thumb flex items-center justify-center shrink-0">
+              <div className="relative w-11 h-11 rounded-full t-container clay-thumb flex items-center justify-center shrink-0">
                 <svg className="w-11 h-11 -rotate-90" viewBox="0 0 44 44">
                   <circle cx="22" cy="22" r="17" stroke="#eedbff" strokeWidth="4" fill="none" />
                   <circle
@@ -298,8 +298,8 @@ export default function SearchPage() {
               <p className="text-[12px] font-bold">Downloading...</p>
             </div>
           )}
-          {urlError && <p className="text-[12px] font-bold text-[#944652]">{urlError}</p>}
-          <p className="text-[11px] font-medium text-[#49454e]">
+          {urlError && <p className="text-[12px] font-bold t-tertiary-text">{urlError}</p>}
+          <p className="text-[11px] font-medium t-muted">
             Tip: use DRM-free audio from the Files app — Apple Music streams cannot be imported.
           </p>
         </div>
@@ -307,13 +307,13 @@ export default function SearchPage() {
         {showingOnline ? (
           <>
             {searching ? (
-              <div className="w-full bg-white p-6 rounded-2xl clay-card flex flex-col items-center text-center gap-3">
+              <div className="w-full t-card p-6 rounded-2xl clay-card flex flex-col items-center text-center gap-3">
                 <div className="flex items-center gap-2">
-                  <span className="w-3.5 h-3.5 rounded-full bg-[#d5c4ff] animate-bounce" />
-                  <span className="w-3.5 h-3.5 rounded-full bg-[#a6d7fe] animate-bounce [animation-delay:150ms]" />
-                  <span className="w-3.5 h-3.5 rounded-full bg-[#ffc7d1] animate-bounce [animation-delay:300ms]" />
+                  <span className="w-3.5 h-3.5 rounded-full t-primary-ct animate-bounce" />
+                  <span className="w-3.5 h-3.5 rounded-full t-secondary-ct animate-bounce [animation-delay:150ms]" />
+                  <span className="w-3.5 h-3.5 rounded-full bg-[var(--tertiary-ct)] animate-bounce [animation-delay:300ms]" />
                 </div>
-                <p className="text-[13px] font-bold text-[#49454e]">Searching the clouds...</p>
+                <p className="text-[13px] font-bold t-muted">Searching the clouds...</p>
               </div>
             ) : (
               <>
@@ -321,26 +321,26 @@ export default function SearchPage() {
                   <div className="flex items-center gap-2">
                     <span className="font-display font-bold text-[18px]">Top hits</span>
                     {!ytUnavailable && (
-                      <span className="font-display font-bold text-[12px] bg-[#ffe0d6] px-2.5 py-0.5 rounded-full clay-thumb">
+                      <span className="font-display font-bold text-[12px] t-tertiary-ct px-2.5 py-0.5 rounded-full clay-thumb">
                         {ytResults.length}
                       </span>
                     )}
                   </div>
-                  <span className="text-[11px] font-bold text-[#49454e]">Tap to preview</span>
+                  <span className="text-[11px] font-bold t-muted">Tap to preview</span>
                 </div>
 
                 {ytUnavailable ? (
-                  <p className="text-[12px] font-bold text-[#49454e] px-1">
+                  <p className="text-[12px] font-bold t-muted px-1">
                     YouTube unavailable right now.
                   </p>
                 ) : ytResults.length === 0 ? (
                   online.length === 0 && !searchError ? (
-                    <div className="w-full bg-white p-6 rounded-2xl clay-card flex flex-col items-center text-center">
+                    <div className="w-full t-card p-6 rounded-2xl clay-card flex flex-col items-center text-center">
                       <p className="font-display font-bold text-[18px]">No matches</p>
-                      <p className="text-[13px] text-[#49454e]">Try a different title or artist.</p>
+                      <p className="text-[13px] t-muted">Try a different title or artist.</p>
                     </div>
                   ) : (
-                    <p className="text-[12px] font-bold text-[#49454e] px-1">
+                    <p className="text-[12px] font-bold t-muted px-1">
                       No Top hits for this query.
                     </p>
                   )
@@ -357,7 +357,7 @@ export default function SearchPage() {
                         <div
                           key={r.videoId}
                           onClick={() => handlePreviewYouTube(r)}
-                          className="w-full bg-white p-3 rounded-2xl clay-card flex items-center justify-between gap-2 text-left cursor-pointer"
+                          className="w-full t-card p-3 rounded-2xl clay-card flex items-center justify-between gap-2 text-left cursor-pointer"
                         >
                           <div className="flex items-center gap-3 min-w-0 flex-1">
                             <div className="relative shrink-0">
@@ -383,13 +383,13 @@ export default function SearchPage() {
                                   aria-label="Loading preview..."
                                   className="absolute inset-0 rounded-2xl bg-white/70 flex items-center justify-center"
                                 >
-                                  <span className="w-6 h-6 rounded-full border-2 border-[#64568a] border-t-transparent animate-spin" />
+                                  <span className="w-6 h-6 rounded-full border-2 border-[var(--primary)] border-t-transparent animate-spin" />
                                 </span>
                               )}
                             </div>
                             <div className="min-w-0 flex-1">
                               <p className="font-display font-bold text-[16px] truncate">{r.title}</p>
-                              <p className="text-[12px] text-[#49454e] truncate">
+                              <p className="text-[12px] t-muted truncate">
                                 {isPreviewing
                                   ? "Loading preview..."
                                   : `${r.artist} • ${fmtTime(r.durationSec)}`}
@@ -401,7 +401,7 @@ export default function SearchPage() {
                               <Icon name="check" />
                             </span>
                           ) : isDownloading ? (
-                            <span className="relative w-11 h-11 rounded-full bg-[#f6e9ff] clay-thumb flex items-center justify-center shrink-0">
+                            <span className="relative w-11 h-11 rounded-full t-container clay-thumb flex items-center justify-center shrink-0">
                               <svg className="w-11 h-11 -rotate-90" viewBox="0 0 44 44">
                                 <circle cx="22" cy="22" r="17" stroke="#eedbff" strokeWidth="4" fill="none" />
                                 <circle
@@ -426,7 +426,7 @@ export default function SearchPage() {
                                 e.stopPropagation();
                                 handleSaveYouTube(r);
                               }}
-                              className="w-11 h-11 rounded-full bg-[#ffd9c9] clay-thumb flex items-center justify-center shrink-0 text-[#231534]"
+                              className="w-11 h-11 rounded-full t-tertiary-ct clay-thumb flex items-center justify-center shrink-0"
                             >
                               <Icon name="download" />
                             </button>
@@ -440,20 +440,20 @@ export default function SearchPage() {
                 <div className="flex items-center justify-between px-1">
                   <div className="flex items-center gap-2">
                     <span className="font-display font-bold text-[18px]">Indie</span>
-                    <span className="font-display font-bold text-[12px] bg-[#e9ddff] px-2.5 py-0.5 rounded-full clay-thumb">
+                    <span className="font-display font-bold text-[12px] t-variant px-2.5 py-0.5 rounded-full clay-thumb">
                       {online.length}
                     </span>
                   </div>
-                  <span className="text-[11px] font-bold text-[#49454e]">Tap to preview</span>
+                  <span className="text-[11px] font-bold t-muted">Tap to preview</span>
                 </div>
 
                 {searchError ? (
-                  <div className="w-full bg-white p-6 rounded-2xl clay-card flex flex-col items-center text-center">
-                    <p className="text-[13px] font-bold text-[#944652]">{searchError}</p>
+                  <div className="w-full t-card p-6 rounded-2xl clay-card flex flex-col items-center text-center">
+                    <p className="text-[13px] font-bold t-tertiary-text">{searchError}</p>
                   </div>
                 ) : online.length === 0 ? (
                   ytResults.length === 0 && !ytUnavailable ? null : (
-                    <p className="text-[12px] font-bold text-[#49454e] px-1">
+                    <p className="text-[12px] font-bold t-muted px-1">
                       No Indie matches for this query.
                     </p>
                   )
@@ -470,7 +470,7 @@ export default function SearchPage() {
                           onClick={() =>
                             preview(audiusMeta(r), audiusStreamUrl(r.sourceId), audiusQueue)
                           }
-                          className="w-full bg-white p-3 rounded-2xl clay-card flex items-center justify-between gap-2 text-left cursor-pointer"
+                          className="w-full t-card p-3 rounded-2xl clay-card flex items-center justify-between gap-2 text-left cursor-pointer"
                         >
                           <div className="flex items-center gap-3 min-w-0 flex-1">
                             {r.artwork ? (
@@ -488,7 +488,7 @@ export default function SearchPage() {
                             )}
                             <div className="min-w-0 flex-1">
                               <p className="font-display font-bold text-[16px] truncate">{r.title}</p>
-                              <p className="text-[12px] text-[#49454e] truncate">
+                              <p className="text-[12px] t-muted truncate">
                                 {r.artist} • {fmtTime(r.durationSec)}
                               </p>
                             </div>
@@ -498,7 +498,7 @@ export default function SearchPage() {
                               <Icon name="check" />
                             </span>
                           ) : isDownloading ? (
-                            <span className="relative w-11 h-11 rounded-full bg-[#f6e9ff] clay-thumb flex items-center justify-center shrink-0">
+                            <span className="relative w-11 h-11 rounded-full t-container clay-thumb flex items-center justify-center shrink-0">
                               <svg className="w-11 h-11 -rotate-90" viewBox="0 0 44 44">
                                 <circle cx="22" cy="22" r="17" stroke="#eedbff" strokeWidth="4" fill="none" />
                                 <circle
@@ -523,7 +523,7 @@ export default function SearchPage() {
                                 e.stopPropagation();
                                 handleSaveAudius(r);
                               }}
-                              className="w-11 h-11 rounded-full bg-[#d5c4ff] clay-thumb flex items-center justify-center shrink-0 text-[#231534]"
+                              className="w-11 h-11 rounded-full t-primary-ct clay-thumb flex items-center justify-center shrink-0"
                             >
                               <Icon name="download" />
                             </button>
@@ -541,35 +541,35 @@ export default function SearchPage() {
             <div className="flex items-center justify-between px-1">
               <div className="flex items-center gap-2">
                 <span className="font-display font-bold text-[18px]">Your stash</span>
-                <span className="font-display font-bold text-[12px] bg-[#e9ddff] px-2.5 py-0.5 rounded-full clay-thumb">{saved.length} saved</span>
+                <span className="font-display font-bold text-[12px] t-variant px-2.5 py-0.5 rounded-full clay-thumb">{saved.length} saved</span>
               </div>
-              <span className="text-[11px] font-bold text-[#49454e]">Tap to play</span>
+              <span className="text-[11px] font-bold t-muted">Tap to play</span>
             </div>
 
             {saved.length === 0 ? (
-              <div className="w-full bg-white p-6 rounded-2xl clay-card flex flex-col items-center text-center">
-                <div className="w-14 h-14 rounded-full bg-[#d5c4ff] clay-thumb flex items-center justify-center text-[#4c3f70] mb-2">
+              <div className="w-full t-card p-6 rounded-2xl clay-card flex flex-col items-center text-center">
+                <div className="w-14 h-14 rounded-full t-primary-ct clay-thumb flex items-center justify-center mb-2">
                   <Icon name="cloud" fill className="text-[28px]" />
                 </div>
                 <h3 className="font-display font-bold text-[22px]">Nothing here yet</h3>
-                <p className="text-[14px] text-[#49454e] max-w-[280px]">Import audio files and they will appear here, offline forever.</p>
+                <p className="text-[14px] t-muted max-w-[280px]">Import audio files and they will appear here, offline forever.</p>
               </div>
             ) : (
               <div className="flex flex-col gap-3">
                 {saved.map((t) => {
                   const isCurrent = current?.id === t.id && playing;
                   return (
-                    <button key={t.id} onClick={() => play(t.id)} className="w-full bg-white p-3 rounded-2xl clay-card flex items-center justify-between gap-2 text-left">
+                    <button key={t.id} onClick={() => play(t.id)} className="w-full t-card p-3 rounded-2xl clay-card flex items-center justify-between gap-2 text-left">
                       <div className="flex items-center gap-3 min-w-0 flex-1">
                         <div className="w-14 h-14 rounded-2xl clay-thumb flex items-center justify-center shrink-0" style={{ background: t.bg }}>
                           <Icon name={t.icon} className="text-[28px]" />
                         </div>
                         <div className="min-w-0 flex-1">
                           <p className="font-display font-bold text-[16px] truncate">{t.title}</p>
-                          <p className="text-[12px] text-[#49454e] truncate">{t.artist} • {fmtTime(t.durationSec)}</p>
+                          <p className="text-[12px] t-muted truncate">{t.artist} • {fmtTime(t.durationSec)}</p>
                         </div>
                       </div>
-                      <span className="w-11 h-11 rounded-full bg-[#d5c4ff] clay-thumb flex items-center justify-center shrink-0 text-[#231534]">
+                      <span className="w-11 h-11 rounded-full t-primary-ct clay-thumb flex items-center justify-center shrink-0">
                         <Icon name={isCurrent ? "pause" : "play_arrow"} fill />
                       </span>
                     </button>

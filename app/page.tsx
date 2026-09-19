@@ -61,17 +61,17 @@ export default function Home() {
   };
 
   return (
-    <div className="bg-[#fff7ff] min-h-dvh max-w-[430px] mx-auto flex flex-col relative">
-      <header className="fixed top-0 inset-x-0 z-50 pt-safe bg-[#fff7ff]/80 backdrop-blur-xl">
+    <div className="t-bg min-h-dvh max-w-[430px] mx-auto flex flex-col relative">
+      <header className="fixed top-0 inset-x-0 z-50 pt-safe t-bg-80 backdrop-blur-xl">
         <div className="max-w-[430px] mx-auto h-16 px-5 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <div className="w-9 h-9 rounded-2xl bg-[#d5c4ff] clay-thumb flex items-center justify-center text-[#4c3f70]">
+            <div className="w-9 h-9 rounded-2xl t-primary-ct clay-thumb flex items-center justify-center">
               <Icon name="cloud" fill />
             </div>
             <span className="font-display font-bold text-[22px]">Puff</span>
           </div>
           <div className="flex items-center gap-2">
-            <Link href="/settings" aria-label="Settings" className="w-11 h-11 rounded-full bg-[#f6e9ff] clay-card flex items-center justify-center text-[#64568a] min-w-[44px]">
+            <Link href="/settings" aria-label="Settings" className="w-11 h-11 rounded-full t-container clay-card flex items-center justify-center t-primary-text min-w-[44px]">
               <Icon name="settings" />
             </Link>
           </div>
@@ -82,24 +82,24 @@ export default function Home() {
         <div className="px-5 pt-3">
           <div>
             <p className="font-display font-bold text-[18px]">Good afternoon</p>
-            <p className="text-[12px] text-[#49454e] font-medium">Sweet Pea&apos;s Sanctuary</p>
+            <p className="text-[12px] t-muted font-medium">Sweet Pea&apos;s Sanctuary</p>
           </div>
         </div>
 
         <div className="mt-6">
           <div className="px-5 flex items-center justify-between mb-2">
             <p className="font-display font-bold text-[22px]">Recently Played</p>
-            <Link href="/library" className="font-display font-bold text-[12px] text-[#64568a] min-h-[44px] flex items-center">See all</Link>
+            <Link href="/library" className="font-display font-bold text-[12px] t-primary-text min-h-[44px] flex items-center">See all</Link>
           </div>
           {recent.length === 0 ? (
             <div className="px-5">
-              <div className="w-full bg-white p-6 rounded-2xl clay-card flex flex-col items-center text-center">
-                <div className="w-14 h-14 rounded-full bg-[#d5c4ff] clay-thumb flex items-center justify-center text-[#4c3f70] mb-2">
+              <div className="w-full t-card p-6 rounded-2xl clay-card flex flex-col items-center text-center">
+                <div className="w-14 h-14 rounded-full t-primary-ct clay-thumb flex items-center justify-center mb-2">
                   <Icon name="cloud" fill className="text-[28px]" />
                 </div>
                 <p className="font-display font-bold text-[18px]">Your stash is empty</p>
-                <p className="text-[13px] text-[#49454e] mt-1">Import audio from your device and it will live here.</p>
-                <Link href="/search" className="mt-3 h-11 px-6 rounded-full bg-[#64568a] text-white font-display font-bold text-[14px] clay-button-active flex items-center min-h-[44px]">
+                <p className="text-[13px] t-muted mt-1">Import audio from your device and it will live here.</p>
+                <Link href="/search" className="mt-3 h-11 px-6 rounded-full t-primary font-display font-bold text-[14px] clay-button-active flex items-center min-h-[44px]">
                   Add music
                 </Link>
               </div>
@@ -114,13 +114,13 @@ export default function Home() {
                       <div className="w-full h-full rounded-[20px] bg-white/70 flex items-center justify-center text-[#4c3f70]">
                         <Icon name={t.icon} fill className="text-[56px]" />
                       </div>
-                      <div className="absolute bottom-3 right-3 w-9 h-9 rounded-full bg-[#64568a] clay-thumb flex items-center justify-center text-white">
+                      <div className="absolute bottom-3 right-3 w-9 h-9 rounded-full t-primary clay-thumb flex items-center justify-center">
                         <Icon name={isCurrent ? "pause" : "play_arrow"} fill className="text-[20px]" />
                       </div>
                     </div>
                     <div className="px-1">
                       <p className="font-display font-bold text-[14px] truncate">{t.title}</p>
-                      <p className="text-[12px] text-[#49454e] truncate">{t.artist}</p>
+                      <p className="text-[12px] t-muted truncate">{t.artist}</p>
                     </div>
                   </button>
                 );
@@ -130,26 +130,26 @@ export default function Home() {
         </div>
 
         <div className="px-5 mt-4">
-          <div className="rounded-2xl bg-gradient-to-br from-[#f6e9ff] to-[#eedbff] p-4 clay-card">
+          <div className="rounded-2xl bg-gradient-to-br from-[var(--container)] to-[var(--variant)] p-4 clay-card">
             <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-full bg-[#d5c4ff] clay-thumb flex items-center justify-center text-[#4c3f70] shrink-0">
+              <div className="w-12 h-12 rounded-full t-primary-ct clay-thumb flex items-center justify-center shrink-0">
                 <Icon name="library_music" fill />
               </div>
               <div>
                 <h3 className="font-display font-bold text-[18px]">Add music</h3>
-                <p className="text-[12px] text-[#49454e]">Import files or paste a link to grow your stash.</p>
+                <p className="text-[12px] t-muted">Import files or paste a link to grow your stash.</p>
               </div>
             </div>
             <div className="grid grid-cols-2 gap-2 mt-3">
               <button
                 type="button"
                 onClick={() => fileRef.current?.click()}
-                className="h-12 rounded-full bg-[#64568a] text-white font-display font-bold text-[14px] clay-button-active flex items-center justify-center gap-1.5 min-h-[48px]"
+                className="h-12 rounded-full t-primary font-display font-bold text-[14px] clay-button-active flex items-center justify-center gap-1.5 min-h-[48px]"
               >
                 <Icon name="upload" className="text-[20px]" />
                 From device
               </button>
-              <Link href="/search" className="h-12 rounded-full bg-white font-display font-bold text-[14px] clay-card flex items-center justify-center gap-1.5 min-h-[48px]">
+              <Link href="/search" className="h-12 rounded-full t-card font-display font-bold text-[14px] clay-card flex items-center justify-center gap-1.5 min-h-[48px]">
                 <Icon name="link" className="text-[20px]" />
                 Paste a link
               </Link>
@@ -163,7 +163,7 @@ export default function Home() {
               onChange={(e) => handleFiles(e.target.files)}
             />
             {importStatus && (
-              <p className="text-[12px] font-bold text-[#49454e] mt-2">{importStatus}</p>
+              <p className="text-[12px] font-bold t-muted mt-2">{importStatus}</p>
             )}
           </div>
         </div>
@@ -171,7 +171,7 @@ export default function Home() {
         <div className="px-5 mt-6">
           <div className="flex items-center justify-between mb-2">
             <p className="font-display font-bold text-[22px]">Moods &amp; Vibes</p>
-            <span className="text-[11px] text-[#49454e] font-medium">Pick a feeling</span>
+            <span className="text-[11px] t-muted font-medium">Pick a feeling</span>
           </div>
           <div className="grid grid-cols-2 gap-3">
             {MOODS.map((m) => (
@@ -192,19 +192,19 @@ export default function Home() {
         </div>
 
         <div className="px-5 mt-4">
-          <div className="p-4 rounded-2xl bg-white clay-card flex items-center justify-between">
+          <div className="p-4 rounded-2xl t-card clay-card flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-[#c9e6ff] flex items-center justify-center text-[#001e2f]">
+              <div className="w-10 h-10 rounded-full t-secondary-ct flex items-center justify-center">
                 <Icon name="bedtime" fill />
               </div>
               <div>
                 <p className="font-display font-bold text-[14px]">Sleep Timer</p>
-                <p className="text-[12px] text-[#49454e]">Auto fade in 30 mins</p>
+                <p className="text-[12px] t-muted">Auto fade in 30 mins</p>
               </div>
             </div>
             <button
               onClick={toggleSleep}
-              className={`w-12 h-7 rounded-full p-0.5 relative min-w-[48px] ${sleepOn ? "bg-[#d5c4ff]" : "bg-[#eedbff]"}`}
+              className={`w-12 h-7 rounded-full p-0.5 relative min-w-[48px] ${sleepOn ? "t-primary-ct" : "t-variant"}`}
               aria-checked={sleepOn}
               role="switch"
             >
