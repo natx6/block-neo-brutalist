@@ -1,4 +1,5 @@
 import { Innertube } from "youtubei.js";
+import { searchOfficial } from "../../../../lib/yt-server";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -17,7 +18,17 @@ export async function GET(req: Request) {
   const q = (searchParams.get("q") ?? "").trim();
   const rawLimit = Number(searchParams.get("limit") ?? "12");
   const limit = Math.min(25, Math.max(1, Math.floor(rawLimit) || 12));
-  if (!q) return Response.json({ results: [] });
+  const officialParam = searchParams.get("official");
+  const wantOfficial = officialParam !== "0";
+  if (!q) return Response.json({ results: [], official: wantOfficial });
+
+  if (wantOfficial) {
+    const official = await searchOfficial(q, limit);
+    if (official.length > 0) {
+      return Response.json({ results: official, official: true });
+    }
+    // Fall through to web search fallback below.
+  }
 
   try {
     const yt = await getTube();
@@ -48,7 +59,7 @@ export async function GET(req: Request) {
         artwork: `https://i.ytimg.com/vi/${id}/hqdefault.jpg`,
       });
     }
-    return Response.json({ results });
+    return Response.json({ results, official: false });
   } catch {
     return Response.json({ error: "yt-search-failed" }, { status: 502 });
   }

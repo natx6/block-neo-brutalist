@@ -17,6 +17,7 @@ import {
   ytPreviewUrl,
   type YTResult,
 } from "../../lib/youtube";
+import { loadSpCreds, spCanonical, type SpCanonical } from "../../lib/spotify";
 import { usePlayer } from "../../lib/player-context";
 
 function ytMeta(r: YTResult) {
@@ -59,6 +60,9 @@ export default function SearchPage() {
   const [searchError, setSearchError] = useState("");
   const [ytUnavailable, setYtUnavailable] = useState(false);
   const [ytImgFail, setYtImgFail] = useState<Set<string>>(new Set());
+  const [officialOnly, setOfficialOnly] = useState(true);
+  const [spConnected, setSpConnected] = useState(false);
+  const [canonical, setCanonical] = useState<SpCanonical | null>(null);
   const [dlProg, setDlProg] = useState<Record<string, number>>({});
   const [url, setUrl] = useState("");
   const [downloading, setDownloading] = useState(false);
@@ -93,12 +97,26 @@ export default function SearchPage() {
       setSearching(false);
       setSearchError("");
       setYtUnavailable(false);
+      setCanonical(null);
       return;
     }
     setSearching(true);
     setSearchError("");
     setYtUnavailable(false);
-    Promise.allSettled([searchYouTube(debounced, 15), searchAudius(debounced, 15)]).then(
+    const creds = loadSpCreds();
+    setSpConnected(!!creds);
+    if (creds) {
+      spCanonical(debounced)
+        .then((c) => {
+          if (!cancelled) setCanonical(c);
+        })
+        .catch(() => {
+          if (!cancelled) setCanonical(null);
+        });
+    } else {
+      setCanonical(null);
+    }
+    Promise.allSettled([searchYouTube(debounced, 15, officialOnly), searchAudius(debounced, 15)]).then(
       ([yt, au]) => {
         if (cancelled) return;
         if (yt.status === "fulfilled") {
@@ -121,7 +139,30 @@ export default function SearchPage() {
     return () => {
       cancelled = true;
     };
-  }, [debounced]);
+  }, [debounced, officialOnly]);
+
+  function scoreYt(r: YTResult, c: SpCanonical): number {
+    let score = 0;
+    const ytTitle = r.title.toLowerCase();
+    const words = c.title.toLowerCase().split(/\s+/).filter((w) => w.length >= 3);
+    if (words.some((w) => ytTitle.includes(w))) score += 50;
+    if (Math.abs((r.durationSec || 0) - (c.durationSec || 0)) <= 3) score += 30;
+    const ytArtist = (r.artist || "").toLowerCase();
+    const cArtist = (c.artist || "").toLowerCase();
+    if (ytArtist && cArtist && (ytArtist.includes(cArtist) || cArtist.includes(ytArtist))) {
+      score += 20;
+    } else if (ytArtist && cArtist) {
+      const aWords = cArtist.split(/[\s,&]+/).filter((w) => w.length >= 3);
+      if (aWords.some((w) => ytArtist.includes(w))) score += 20;
+    }
+    return score;
+  }
+
+  const rankedYtResults =
+    canonical && spConnected
+      ? [...ytResults].sort((a, b) => scoreYt(b, canonical) - scoreYt(a, canonical))
+      : ytResults;
+  const showMatchBadge = !!(canonical && spConnected && rankedYtResults.length > 0);
 
   const handleFiles = async (files: FileList | null) => {
     if (!files || files.length === 0) return;
@@ -322,18 +363,54 @@ export default function SearchPage() {
                     <span className="font-display font-bold text-[18px]">Top hits</span>
                     {!ytUnavailable && (
                       <span className="font-display font-bold text-[12px] t-tertiary-ct px-2.5 py-0.5 rounded-full clay-thumb">
-                        {ytResults.length}
+                        {rankedYtResults.length}
                       </span>
                     )}
                   </div>
                   <span className="text-[11px] font-bold t-muted">Tap to preview</span>
                 </div>
 
+                <div className="flex items-center gap-2 px-1">
+                  <button
+                    type="button"
+                    onClick={() => setOfficialOnly((v) => !v)}
+                    aria-pressed={officialOnly}
+                    className={`h-9 px-4 rounded-full font-display font-bold text-[12px] clay-thumb ${officialOnly ? "t-primary-ct" : "t-surface t-muted"}`}
+                  >
+                    Official only
+                  </button>
+                </div>
+
+                {canonical && spConnected && (
+                  <div className="w-full t-card p-3 rounded-2xl clay-card flex items-center gap-3">
+                    {canonical.artwork ? (
+                      <img
+                        src={canonical.artwork}
+                        alt=""
+                        width={56}
+                        height={56}
+                        className="w-14 h-14 rounded-2xl object-cover clay-thumb shrink-0"
+                      />
+                    ) : (
+                      <div className="w-14 h-14 rounded-2xl clay-thumb flex items-center justify-center shrink-0" style={{ background: "#D6F0FF" }}>
+                        <Icon name="music_note" className="text-[28px]" />
+                      </div>
+                    )}
+                    <div className="min-w-0 flex-1">
+                      <p className="font-display font-bold text-[16px] truncate">{canonical.title}</p>
+                      <p className="text-[12px] t-muted truncate">
+                        {canonical.artist}{canonical.album ? ` • ${canonical.album}` : ""}{canonical.durationSec ? ` • ${fmtTime(canonical.durationSec)}` : ""}
+                      </p>
+                      <p className="text-[11px] font-bold t-muted">Matched from your Spotify</p>
+                    </div>
+                  </div>
+                )}
+
                 {ytUnavailable ? (
                   <p className="text-[12px] font-bold t-muted px-1">
                     YouTube unavailable right now.
                   </p>
-                ) : ytResults.length === 0 ? (
+                ) : rankedYtResults.length === 0 ? (
                   online.length === 0 && !searchError ? (
                     <div className="w-full t-card p-6 rounded-2xl clay-card flex flex-col items-center text-center">
                       <p className="font-display font-bold text-[18px]">No matches</p>
@@ -346,7 +423,7 @@ export default function SearchPage() {
                   )
                 ) : (
                   <div className="flex flex-col gap-3">
-                    {ytResults.map((r) => {
+                    {rankedYtResults.map((r, idx) => {
                       const savedKey = `yt-${r.videoId}`;
                       const isSaved = savedIds.has(savedKey);
                       const prog = dlProg[savedKey];
@@ -389,6 +466,11 @@ export default function SearchPage() {
                             </div>
                             <div className="min-w-0 flex-1">
                               <p className="font-display font-bold text-[16px] truncate">{r.title}</p>
+                              {showMatchBadge && idx === 0 && (
+                                <span className="inline-block font-display font-bold text-[11px] t-primary-ct px-2.5 py-0.5 rounded-full clay-thumb mt-1">
+                                  Official match
+                                </span>
+                              )}
                               <p className="text-[12px] t-muted truncate">
                                 {isPreviewing
                                   ? "Loading preview..."
@@ -452,7 +534,7 @@ export default function SearchPage() {
                     <p className="text-[13px] font-bold t-tertiary-text">{searchError}</p>
                   </div>
                 ) : online.length === 0 ? (
-                  ytResults.length === 0 && !ytUnavailable ? null : (
+                  rankedYtResults.length === 0 && !ytUnavailable ? null : (
                     <p className="text-[12px] font-bold t-muted px-1">
                       No Indie matches for this query.
                     </p>

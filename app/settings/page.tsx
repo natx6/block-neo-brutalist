@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Icon } from "../components/Nav";
 import { clearTracks, listTracks } from "../../lib/db";
 import { loadSettings, storeSettings, type Settings } from "../../lib/downloads";
+import { clearSpCreds, loadSpCreds, saveSpCreds } from "../../lib/spotify";
 import { usePlayer } from "../../lib/player-context";
 import { THEMES, applyTheme, loadTheme } from "../../lib/themes";
 
@@ -15,11 +16,20 @@ export default function SettingsPage() {
   const [settings, setSettings] = useState<Settings>({ quality: "Good", wifiOnly: true, offlineMode: false, sleepOn: true });
   const [notice, setNotice] = useState("");
   const [theme, setTheme] = useState("puff");
+  const [spId, setSpId] = useState("");
+  const [spSecret, setSpSecret] = useState("");
+  const [spConnected, setSpConnected] = useState(false);
 
   useEffect(() => {
     const s = loadSettings();
     setSettings(s);
     setTheme(loadTheme());
+    const creds = loadSpCreds();
+    setSpConnected(!!creds);
+    if (creds) {
+      setSpId(creds.clientId);
+      setSpSecret(creds.clientSecret);
+    }
   }, []);
 
   useEffect(() => {
@@ -45,6 +55,21 @@ export default function SettingsPage() {
   const handleTheme = (id: string) => {
     applyTheme(id);
     setTheme(id);
+  };
+
+  const handleSpSave = () => {
+    if (!spId.trim() || !spSecret.trim()) return;
+    saveSpCreds({ clientId: spId.trim(), clientSecret: spSecret.trim() });
+    setSpConnected(true);
+    setNotice("");
+  };
+
+  const handleSpDisconnect = () => {
+    clearSpCreds();
+    setSpId("");
+    setSpSecret("");
+    setSpConnected(false);
+    setNotice("");
   };
 
   const handleClear = async () => {
@@ -93,6 +118,52 @@ export default function SettingsPage() {
                 </button>
               );
             })}
+          </div>
+        </div>
+
+        <div className="t-card rounded-2xl p-4 clay-card">
+          <p className="font-display font-bold mb-1">Spotify connect</p>
+          <p className="text-[12px] t-muted mb-3">
+            {spConnected ? "Connected — official matching on" : "Not connected"}
+          </p>
+          <div className="flex flex-col gap-2">
+            <input
+              value={spId}
+              onChange={(e) => setSpId(e.target.value)}
+              placeholder="Client ID"
+              aria-label="Spotify Client ID"
+              autoComplete="off"
+              className="h-12 rounded-full t-surface px-4 text-[14px] font-medium focus:outline-none min-w-0 shadow-[inset_2px_2px_5px_rgba(74,59,92,0.12)]"
+            />
+            <input
+              value={spSecret}
+              onChange={(e) => setSpSecret(e.target.value)}
+              placeholder="Client Secret"
+              aria-label="Spotify Client Secret"
+              type="password"
+              autoComplete="off"
+              className="h-12 rounded-full t-surface px-4 text-[14px] font-medium focus:outline-none min-w-0 shadow-[inset_2px_2px_5px_rgba(74,59,92,0.12)]"
+            />
+            <div className="flex gap-2">
+              <button
+                onClick={handleSpSave}
+                disabled={!spId.trim() || !spSecret.trim()}
+                className="flex-1 h-12 rounded-full t-primary font-display font-bold text-[14px] clay-button-active min-h-[48px] disabled:opacity-50"
+              >
+                Save
+              </button>
+              <button
+                onClick={handleSpDisconnect}
+                className="flex-1 h-12 rounded-full t-surface font-display font-bold text-[14px] clay-card min-h-[48px] t-muted"
+              >
+                Disconnect
+              </button>
+            </div>
+            <details className="text-[12px] t-muted">
+              <summary className="font-bold cursor-pointer">How to get keys</summary>
+              <p className="mt-1">developer.spotify.com/dashboard -&gt; Create app -&gt; copy ID + Secret.</p>
+            </details>
+            <p className="text-[11px] t-muted">Free tier, your keys stay on this device.</p>
           </div>
         </div>
 

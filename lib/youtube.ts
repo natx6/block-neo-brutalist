@@ -10,8 +10,10 @@ export function ytArtwork(videoId: string): string {
   return `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`;
 }
 
-export async function searchYouTube(q: string, limit = 12): Promise<YTResult[]> {
-  const res = await fetch(`/api/yt/search?q=${encodeURIComponent(q)}&limit=${limit}`);
+export async function searchYouTube(q: string, limit = 12, official = true): Promise<YTResult[]> {
+  const res = await fetch(
+    `/api/yt/search?q=${encodeURIComponent(q)}&limit=${limit}&official=${official ? "1" : "0"}`
+  );
   if (!res.ok) throw new Error("yt-search-failed");
   const json = await res.json();
   const results = Array.isArray(json?.results) ? json.results : [];
