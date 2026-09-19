@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { Icon } from "../components/Nav";
 
 export default function PlayerPage() {
   const [playing, setPlaying] = useState(true);
@@ -16,7 +17,9 @@ export default function PlayerPage() {
             <Link href="/" className="w-11 h-11 rounded-full bg-[#f6e9ff] clay-card flex items-center justify-center min-w-[44px]">‹</Link>
             <h1 className="font-display font-bold text-[18px]">Now Playing</h1>
           </div>
-          <div className="w-8 h-8 rounded-full bg-[#64568a] flex items-center justify-center text-white text-sm">☺</div>
+          <div className="w-8 h-8 rounded-full bg-[#64568a] flex items-center justify-center text-white">
+            <Icon name="person" className="text-[18px]" />
+          </div>
         </div>
       </header>
 
@@ -27,8 +30,9 @@ export default function PlayerPage() {
         <div className="flex justify-center pt-2 pb-6">
           <div className="relative w-[280px] h-[280px] rounded-[32px] p-4 bg-white clay-card flex items-center justify-center">
             <div className="absolute top-6 left-8 right-8 h-8 rounded-full bg-gradient-to-b from-white/70 to-transparent pointer-events-none z-10" />
-            <div className="w-full h-full rounded-[22px] bg-gradient-to-br from-[#FFE0D6] via-[#E9DCFF] to-[#D1EEFF] flex items-center justify-center text-8xl">
-              ☁️🎧
+            <div className="w-full h-full rounded-[22px] bg-gradient-to-br from-[#FFE0D6] via-[#E9DCFF] to-[#D1EEFF] flex items-center justify-center gap-2 text-[#4c3f70]">
+              <Icon name="cloud" className="text-[72px]" fill />
+              <Icon name="music_note" className="text-[64px]" />
             </div>
             <div className="absolute -bottom-3 right-5 px-3 py-1 rounded-full bg-white clay-thumb flex items-center gap-1.5 z-20">
               <span className="w-2 h-2 rounded-full bg-[#306385] animate-pulse" />
@@ -42,8 +46,8 @@ export default function PlayerPage() {
             <h2 className="font-display font-bold text-[22px] truncate">Cotton Candy Clouds</h2>
             <p className="font-bold text-[14px] text-[#49454e] truncate">● Lofi Pillow</p>
           </div>
-          <button onClick={() => setLiked(!liked)} className="w-12 h-12 rounded-full bg-white clay-card flex items-center justify-center text-2xl min-w-[48px] min-h-[48px]">
-            {liked ? "❤️" : "🤍"}
+          <button onClick={() => setLiked(!liked)} aria-label="Favorite" className="w-12 h-12 rounded-full bg-white clay-card flex items-center justify-center min-w-[48px] min-h-[48px]">
+            <Icon name="favorite" fill={liked} className="text-[28px]" />
           </button>
         </div>
 
@@ -70,24 +74,34 @@ export default function PlayerPage() {
         </div>
 
         <div className="flex items-center justify-between px-2 mb-8">
-          <button className="w-11 h-11 rounded-full bg-[#f6e9ff] clay-card min-w-[44px] min-h-[44px]">🔀</button>
-          <button className="w-[52px] h-[52px] rounded-full bg-[#e9ddff] clay-card text-xl min-w-[52px] min-h-[52px]">⏮</button>
-          <button onClick={() => setPlaying(!playing)} className="w-[72px] h-[72px] rounded-full bg-[#ffbbc2] clay-card text-3xl min-w-[72px] min-h-[72px] active:scale-95">
-            {playing ? "⏸" : "▶"}
+          <button aria-label="Shuffle" className="w-11 h-11 rounded-full bg-[#f6e9ff] clay-card flex items-center justify-center min-w-[44px] min-h-[44px]">
+            <Icon name="shuffle" />
           </button>
-          <button className="w-[52px] h-[52px] rounded-full bg-[#c9e6ff] clay-card text-xl min-w-[52px] min-h-[52px]">⏭</button>
-          <button className="w-11 h-11 rounded-full bg-[#f6e9ff] clay-card min-w-[44px] min-h-[44px]">🔁</button>
+          <button aria-label="Previous" className="w-[52px] h-[52px] rounded-full bg-[#e9ddff] clay-card flex items-center justify-center min-w-[52px] min-h-[52px]">
+            <Icon name="skip_previous" fill />
+          </button>
+          <button onClick={() => setPlaying(!playing)} aria-label="Play or pause" className="w-[72px] h-[72px] rounded-full bg-[#ffbbc2] clay-card flex items-center justify-center min-w-[72px] min-h-[72px] active:scale-95">
+            <Icon name={playing ? "pause" : "play_arrow"} fill className="text-[36px]" />
+          </button>
+          <button aria-label="Next" className="w-[52px] h-[52px] rounded-full bg-[#c9e6ff] clay-card flex items-center justify-center min-w-[52px] min-h-[52px]">
+            <Icon name="skip_next" fill />
+          </button>
+          <button aria-label="Repeat" className="w-11 h-11 rounded-full bg-[#f6e9ff] clay-card flex items-center justify-center min-w-[44px] min-h-[44px]">
+            <Icon name="repeat_one" />
+          </button>
         </div>
 
         <div className="w-full bg-[#f6e9ff]/60 rounded-[28px] p-3 clay-card flex items-center justify-around">
           {[
-            { icon: "⬇", label: "Saved" },
-            { icon: "➕", label: "Add" },
-            { icon: "↗", label: "Share" },
-            { icon: "🎶", label: "Queue", href: "/queue" },
+            { icon: "download", label: "Saved" },
+            { icon: "add", label: "Add" },
+            { icon: "share", label: "Share" },
+            { icon: "queue_music", label: "Queue", href: "/queue" },
           ].map((b) => (
             <Link key={b.label} href={b.href ?? "/player"} className="flex flex-col items-center gap-1 min-w-[56px] min-h-[56px] justify-center">
-              <div className="w-11 h-11 rounded-full bg-white clay-thumb flex items-center justify-center text-lg">{b.icon}</div>
+              <div className="w-11 h-11 rounded-full bg-white clay-thumb flex items-center justify-center">
+                <Icon name={b.icon} className="text-[20px]" />
+              </div>
               <span className="font-display font-bold text-[11px]">{b.label}</span>
             </Link>
           ))}

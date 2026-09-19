@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { Icon } from "../components/Nav";
 
 export default function SettingsPage() {
   const [quality, setQuality] = useState(1);
@@ -45,7 +46,9 @@ export default function SettingsPage() {
           </div>
         ))}
 
-        <button className="h-14 rounded-full bg-[#ffbbc2] font-display font-bold clay-card min-h-[56px]">🗑 Clear downloads</button>
+        <button className="h-14 rounded-full bg-[#ffbbc2] font-display font-bold clay-card min-h-[56px] flex items-center justify-center gap-2">
+          <Icon name="delete" /> Clear downloads
+        </button>
         <p className="text-[12px] text-center text-[#49454e]">Puff v1 • local-first: audio on device, library index syncs for re-download.</p>
       </main>
     </div>

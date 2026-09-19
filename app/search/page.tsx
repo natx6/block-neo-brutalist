@@ -1,16 +1,16 @@
 "use client";
 
 import { useState } from "react";
-import { BottomNav, MiniPlayer, TopBar } from "../components/Nav";
+import { BottomNav, Icon, MiniPlayer, TopBar } from "../components/Nav";
 
 const TRACKS = [
-  { title: "Pillow Talk Dreams", artist: "Lily & Cloud", time: "3:14", emoji: "☁️", bg: "#E9DCFF", state: "idle" },
-  { title: "Mint Jelly Reverie", artist: "Bubble Pop", time: "2:48", emoji: "🍬", bg: "#D4F7E6", state: "downloading", progress: 68 },
-  { title: "Cozy Blanket Breeze", artist: "Slumber Note", time: "3:52", emoji: "🛋️", bg: "#FFE0D6", state: "saved" },
-  { title: "Sugar Plum Lullaby", artist: "Velvet Soft", time: "4:10", emoji: "🍭", bg: "#FFD9DC", state: "idle" },
+  { title: "Pillow Talk Dreams", artist: "Lily & Cloud", time: "3:14", icon: "cloud", bg: "#E9DCFF", state: "idle" },
+  { title: "Mint Jelly Reverie", artist: "Bubble Pop", time: "2:48", icon: "water_drop", bg: "#D4F7E6", state: "downloading", progress: 68 },
+  { title: "Cozy Blanket Breeze", artist: "Slumber Note", time: "3:52", icon: "bedtime", bg: "#FFE0D6", state: "saved" },
+  { title: "Sugar Plum Lullaby", artist: "Velvet Soft", time: "4:10", icon: "music_note", bg: "#FFD9DC", state: "idle" },
 ];
 
-const FILTERS = ["✨ All", "🌙 Sleepy", "🎹 Instrumental", "🎸 Acoustic", "☁️ Ambient"];
+const FILTERS = ["All", "Sleepy", "Instrumental", "Acoustic", "Ambient"];
 
 export default function SearchPage() {
   const [query, setQuery] = useState("Lo-Fi Chill & Sleep");
@@ -20,17 +20,21 @@ export default function SearchPage() {
   return (
     <div className="bg-[#fff7ff] min-h-dvh max-w-[430px] mx-auto flex flex-col relative">
       <TopBar title="Search" />
-      <main className="flex-1 pt-16 pb-[160px] px-5 flex flex-col gap-4">
+      <main className="flex-1 pt-16 pb-[180px] px-5 flex flex-col gap-4">
         <div className="pt-3">
           <div className="flex items-center w-full h-14 bg-white rounded-full px-4 clay-card">
-            <span className="text-[#64568a] text-xl mr-2">🔍</span>
+            <span className="text-[#64568a] mr-2 flex items-center">
+              <Icon name="search" />
+            </span>
             <input
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               aria-label="Search tracks"
               className="flex-1 bg-transparent font-display font-semibold text-[16px] focus:outline-none min-w-0"
             />
-            <button onClick={() => setQuery("")} className="w-10 h-10 rounded-full bg-[#f6e9ff] clay-thumb flex items-center justify-center min-w-[44px]">✕</button>
+            <button onClick={() => setQuery("")} aria-label="Clear search" className="w-10 h-10 rounded-full bg-[#f6e9ff] clay-thumb flex items-center justify-center min-w-[44px]">
+              <Icon name="close" className="text-[18px]" />
+            </button>
           </div>
         </div>
 
@@ -60,8 +64,8 @@ export default function SearchPage() {
           {TRACKS.map((t) => (
             <div key={t.title} className="w-full bg-white p-3 rounded-2xl clay-card flex items-center justify-between gap-2">
               <div className="flex items-center gap-3 min-w-0 flex-1">
-                <div className="w-14 h-14 rounded-2xl clay-thumb flex items-center justify-center text-3xl shrink-0" style={{ background: t.bg }}>
-                  {t.emoji}
+                <div className="w-14 h-14 rounded-2xl clay-thumb flex items-center justify-center shrink-0" style={{ background: t.bg }}>
+                  <Icon name={t.icon} className="text-[28px]" />
                 </div>
                 <div className="min-w-0 flex-1">
                   <p className="font-display font-bold text-[16px] truncate">{t.title}</p>
@@ -69,7 +73,9 @@ export default function SearchPage() {
                 </div>
               </div>
               {t.state === "idle" && (
-                <button aria-label={`Download ${t.title}`} className="w-11 h-11 rounded-full bg-[#a6d7fe] clay-thumb flex items-center justify-center text-lg min-w-[44px] min-h-[44px] active:scale-90">⬇</button>
+                <button aria-label={`Download ${t.title}`} className="w-11 h-11 rounded-full bg-[#a6d7fe] clay-thumb flex items-center justify-center min-w-[44px] min-h-[44px] active:scale-90">
+                  <Icon name="download" />
+                </button>
               )}
               {t.state === "downloading" && (
                 <div className="relative w-11 h-11 rounded-full bg-[#f6e9ff] clay-thumb flex items-center justify-center min-w-[44px] min-h-[44px]">
@@ -81,7 +87,9 @@ export default function SearchPage() {
                 </div>
               )}
               {t.state === "saved" && (
-                <button aria-label="Saved" className="w-11 h-11 rounded-full bg-[#c9e6ff] clay-thumb flex items-center justify-center font-bold min-w-[44px] min-h-[44px]">✓</button>
+                <button aria-label="Saved" className="w-11 h-11 rounded-full bg-[#c9e6ff] clay-thumb flex items-center justify-center font-bold min-w-[44px] min-h-[44px]">
+                  <Icon name="check" />
+                </button>
               )}
             </div>
           ))}
@@ -98,12 +106,19 @@ export default function SearchPage() {
           </div>
         ) : (
           <div className="w-full bg-white p-6 rounded-2xl clay-card flex flex-col items-center text-center">
-            <div className="text-6xl mb-2">☁️💤</div>
+            <div className="flex items-center gap-2 mb-2 text-[#64568a]">
+              <Icon name="cloud" className="text-[48px]" />
+              <Icon name="bedtime" className="text-[48px]" />
+            </div>
             <h3 className="font-display font-bold text-[22px]">Nothing here yet</h3>
-            <p className="text-[14px] text-[#49454e] max-w-[280px]">Try searching for daydream sounds or lo-fi beats! ✨</p>
+            <p className="text-[14px] text-[#49454e] max-w-[280px]">Try searching for daydream sounds or lo-fi beats!</p>
             <div className="flex flex-wrap justify-center gap-2 mt-3">
-              <button className="px-3.5 py-2 rounded-full bg-[#f6e9ff] font-display font-bold text-[12px] clay-thumb min-h-[44px]">☁️ Rain on Canvas</button>
-              <button className="px-3.5 py-2 rounded-full bg-[#f6e9ff] font-display font-bold text-[12px] clay-thumb min-h-[44px]">🌙 Midnight Cocoa</button>
+              <button className="px-3.5 py-2 rounded-full bg-[#f6e9ff] font-display font-bold text-[12px] clay-thumb min-h-[44px] flex items-center gap-1.5">
+                <Icon name="cloud" className="text-[18px]" /> Rain on Canvas
+              </button>
+              <button className="px-3.5 py-2 rounded-full bg-[#f6e9ff] font-display font-bold text-[12px] clay-thumb min-h-[44px] flex items-center gap-1.5">
+                <Icon name="bedtime" className="text-[18px]" /> Midnight Cocoa
+              </button>
             </div>
           </div>
         )}
