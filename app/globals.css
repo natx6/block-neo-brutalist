@@ -340,3 +340,14 @@ html, body {
   font-variation-settings: "FILL" 0, "wght" 400, "GRAD" 0, "opsz" 24;
 }
 .material-symbols-outlined.fill { font-variation-settings: "FILL" 1, "wght" 400, "GRAD" 0, "opsz" 24; }
+
+@keyframes puff-drift-a {
+  0%, 100% { transform: translate(-12%, -6%) scale(1); }
+  50% { transform: translate(10%, 8%) scale(1.25); }
+}
+@keyframes puff-drift-b {
+  0%, 100% { transform: translate(10%, 10%) scale(1.15); }
+  50% { transform: translate(-10%, -8%) scale(0.95); }
+}
+.puff-blob-a { animation: puff-drift-a 14s ease-in-out infinite; }
+.puff-blob-b { animation: puff-drift-b 18s ease-in-out infinite; }

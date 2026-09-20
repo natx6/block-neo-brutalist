@@ -18,6 +18,7 @@ export default function Home() {
   const [sleepOn, setSleepOn] = useState(true);
   const [recent, setRecent] = useState<SavedTrack[]>([]);
   const [importStatus, setImportStatus] = useState("");
+  const [artFail, setArtFail] = useState<Set<string>>(new Set());
   const fileRef = useRef<HTMLInputElement>(null);
   const { current, playing, play } = usePlayer();
 
@@ -108,12 +109,22 @@ export default function Home() {
             <div className="flex gap-4 overflow-x-auto px-5 pb-3 pt-1 no-scrollbar">
               {recent.map((t) => {
                 const isCurrent = current?.id === t.id && playing;
+                const showArt = !!t.artwork && !artFail.has(t.id);
                 return (
                   <button key={t.id} onClick={() => play(t.id)} className="flex flex-col gap-2 shrink-0 w-[140px] text-left active:scale-95 transition-transform">
                     <div className="relative w-[140px] h-[140px] rounded-[28px] p-2 clay-card flex items-center justify-center" style={{ background: t.bg }}>
-                      <div className="w-full h-full rounded-[20px] bg-white/70 flex items-center justify-center text-[#4c3f70]">
-                        <Icon name={t.icon} fill className="text-[56px]" />
-                      </div>
+                      {showArt ? (
+                        <img
+                          src={t.artwork as string}
+                          alt=""
+                          className="w-full h-full rounded-[20px] object-cover"
+                          onError={() => setArtFail((prev) => new Set(prev).add(t.id))}
+                        />
+                      ) : (
+                        <div className="w-full h-full rounded-[20px] bg-white/70 flex items-center justify-center text-[#4c3f70]">
+                          <Icon name={t.icon} fill className="text-[56px]" />
+                        </div>
+                      )}
                       <div className="absolute bottom-3 right-3 w-9 h-9 rounded-full t-primary clay-thumb flex items-center justify-center">
                         <Icon name={isCurrent ? "pause" : "play_arrow"} fill className="text-[20px]" />
                       </div>

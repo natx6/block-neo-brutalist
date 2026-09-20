@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { usePlayer } from "../../lib/player-context";
 
 export function Icon({ name, fill = false, className = "" }: { name: string; fill?: boolean; className?: string }) {
@@ -11,19 +11,36 @@ export function Icon({ name, fill = false, className = "" }: { name: string; fil
 export function MiniPlayer() {
   const { current, playing, toggle } = usePlayer();
   const [liked, setLiked] = useState(false);
+  const [artFailed, setArtFailed] = useState(false);
   const title = current?.title ?? "Nothing playing";
   const artist = current?.artist ?? "Import tunes to begin";
+  const showArt = !!current?.artwork && !artFailed;
+  useEffect(() => {
+    setArtFailed(false);
+  }, [current?.id]);
   return (
     <aside className="fixed inset-x-0 z-40 px-5 pointer-events-none" style={{ bottom: "calc(5.5rem + env(safe-area-inset-bottom, 0px))" }}>
       <div className="pointer-events-auto mx-auto max-w-[390px] h-[64px] t-card-95 rounded-full px-3 flex items-center justify-between clay-pill">
-        <Link href="/player" className="flex items-center gap-3 min-w-0 flex-1">
-          <div className="w-11 h-11 rounded-full t-primary-ct clay-thumb flex items-center justify-center shrink-0">
-            <Icon name="music_note" />
-          </div>
+        <Link href="/player" className="flex items-center gap-3 min-w-0 flex-1" onClick={() => setArtFailed(false)}>
+          {showArt ? (
+            <img
+              src={current.artwork as string}
+              alt=""
+              className="w-11 h-11 rounded-full object-cover clay-thumb shrink-0"
+              onError={() => setArtFailed(true)}
+            />
+          ) : (
+            <div className="w-11 h-11 rounded-full t-primary-ct clay-thumb flex items-center justify-center shrink-0">
+              <Icon name="music_note" />
+            </div>
+          )}
           <div className="min-w-0 flex-1">
             <p className="font-display font-bold text-[14px] truncate">{title}</p>
             <p className="text-[11px] t-tertiary-text truncate font-bold">{artist}</p>
           </div>
+          <span className="t-muted flex items-center" aria-hidden>
+            <Icon name="expand_less" />
+          </span>
         </Link>
         <div className="flex items-center gap-1 shrink-0">
           <button onClick={() => setLiked(!liked)} aria-label="Favorite" className="w-11 h-11 flex items-center justify-center min-w-[44px] min-h-[44px] t-muted">

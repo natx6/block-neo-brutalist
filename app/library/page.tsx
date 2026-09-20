@@ -8,9 +8,15 @@ import { usePlayer } from "../../lib/player-context";
 
 const TABS = ["Playlists", "Saved"];
 
+let lastTab = 0;
+
 export default function LibraryPage() {
   const { current, playing, play } = usePlayer();
-  const [tab, setTab] = useState(0);
+  const [tab, setTabState] = useState(lastTab);
+  const setTab = (i: number) => {
+    lastTab = i;
+    setTabState(i);
+  };
   const [playlists, setPlaylists] = useState<Playlist[]>([]);
   const [saved, setSaved] = useState<SavedTrack[]>([]);
 

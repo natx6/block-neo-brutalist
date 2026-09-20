@@ -16,6 +16,17 @@ import { searchSaavn, streamUrl, type SaavnResult } from "../../lib/saavn";
 import { loadSpCreds, spCanonical, type SpCanonical } from "../../lib/spotify";
 import { usePlayer } from "../../lib/player-context";
 
+// Survives in-app navigation (module singleton): back button restores
+// query + results instantly instead of a blank page.
+const searchCache: {
+  query: string;
+  fetchedQuery: string;
+  online: OnlineResult[];
+  saavn: SaavnResult[];
+  canonical: SpCanonical | null;
+  scrollY: number;
+} = { query: "", fetchedQuery: "", online: [], saavn: [], canonical: null, scrollY: 0 };
+
 function saavnMeta(r: SaavnResult) {
   return {
     id: `saavn-${r.id}`,
@@ -48,18 +59,18 @@ function audiusMeta(r: OnlineResult) {
 
 export default function SearchPage() {
   const { current, playing, play, preview } = usePlayer();
-  const [query, setQuery] = useState("");
-  const [debounced, setDebounced] = useState("");
+  const [query, setQuery] = useState(searchCache.query);
+  const [debounced, setDebounced] = useState(searchCache.query.trim());
   const [saved, setSaved] = useState<SavedTrack[]>([]);
   const [savedIds, setSavedIds] = useState<Set<string>>(new Set());
-  const [online, setOnline] = useState<OnlineResult[]>([]);
-  const [saavnResults, setSaavnResults] = useState<SaavnResult[]>([]);
+  const [online, setOnline] = useState<OnlineResult[]>(searchCache.online);
+  const [saavnResults, setSaavnResults] = useState<SaavnResult[]>(searchCache.saavn);
   const [searching, setSearching] = useState(false);
   const [searchError, setSearchError] = useState("");
   const [saavnUnavailable, setSaavnUnavailable] = useState(false);
   const [saavnImgFail, setSaavnImgFail] = useState<Set<string>>(new Set());
   const [spConnected, setSpConnected] = useState(false);
-  const [canonical, setCanonical] = useState<SpCanonical | null>(null);
+  const [canonical, setCanonical] = useState<SpCanonical | null>(searchCache.canonical);
   const [dlProg, setDlProg] = useState<Record<string, number>>({});
   const [url, setUrl] = useState("");
   const [downloading, setDownloading] = useState(false);
@@ -80,7 +91,25 @@ export default function SearchPage() {
 
   useEffect(() => {
     refresh();
+    // Restore scroll + cached results from last visit.
+    if (searchCache.scrollY > 0) {
+      const y = searchCache.scrollY;
+      requestAnimationFrame(() => window.scrollTo(0, y));
+    }
+    return () => {
+      searchCache.scrollY = window.scrollY;
+    };
   }, [refresh]);
+
+  // Persist query + results for back-navigation restores.
+  useEffect(() => {
+    searchCache.query = query;
+  }, [query]);
+  useEffect(() => {
+    searchCache.online = online;
+    searchCache.saavn = saavnResults;
+    searchCache.canonical = canonical;
+  }, [online, saavnResults, canonical]);
 
   useEffect(() => {
     const t = setTimeout(() => setDebounced(query.trim()), 600);
@@ -96,6 +125,15 @@ export default function SearchPage() {
       setSearchError("");
       setSaavnUnavailable(false);
       setCanonical(null);
+      searchCache.fetchedQuery = "";
+      return;
+    }
+    // Restored from cache (back navigation): show instantly, no refetch flash.
+    if (
+      searchCache.fetchedQuery === debounced &&
+      (searchCache.saavn.length > 0 || searchCache.online.length > 0)
+    ) {
+      setSearching(false);
       return;
     }
     setSearching(true);
@@ -132,6 +170,7 @@ export default function SearchPage() {
           setOnline([]);
           setSearchError("Search failed — check connection.");
         }
+        searchCache.fetchedQuery = debounced;
         setSearching(false);
       }
     );

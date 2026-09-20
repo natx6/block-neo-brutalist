@@ -2,11 +2,12 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Icon } from "../components/Nav";
 import { usePlayer } from "../../lib/player-context";
 import { fmtTime } from "../../lib/catalog";
 import { db, listPlaylists, type Playlist } from "../../lib/db";
-import { loadSettings } from "../../lib/downloads";
+import { isSaved as checkSaved, loadSettings } from "../../lib/downloads";
 
 export default function PlayerPage() {
   const {
@@ -30,6 +31,8 @@ export default function PlayerPage() {
   const [savedDone, setSavedDone] = useState(false);
   const [shareMsg, setShareMsg] = useState<string | null>(null);
   const [showAdd, setShowAdd] = useState(false);
+  const [leaving, setLeaving] = useState(false);
+  const router = useRouter();
   const [playlists, setPlaylists] = useState<Playlist[]>([]);
   const [newName, setNewName] = useState("");
   const [addingId, setAddingId] = useState<string | null>(null);
@@ -48,7 +51,30 @@ export default function PlayerPage() {
   }, [current?.artwork]);
 
   useEffect(() => {
-    setSavedDone(false);
+    let live = true;
+    const check = async () => {
+      if (!current) {
+        if (live) setSavedDone(false);
+        return;
+      }
+      if (current.source === "stash") {
+        if (live) setSavedDone(true);
+        return;
+      }
+      try {
+        if (live) setSavedDone(await checkSaved(current.id));
+      } catch {}
+    };
+    check();
+    const onFocus = () => check();
+    window.addEventListener("focus", onFocus);
+    return () => {
+      live = false;
+      window.removeEventListener("focus", onFocus);
+    };
+  }, [current?.id]);
+
+  useEffect(() => {
     setSavePct(null);
   }, [current?.id]);
 
@@ -149,27 +175,42 @@ export default function PlayerPage() {
     }
   };
 
+  const dismiss = () => {
+    if (leaving) return;
+    setLeaving(true);
+    setTimeout(() => router.back(), 300);
+  };
+
   return (
-    <div className="t-bg h-dvh max-w-[430px] mx-auto flex flex-col relative overflow-hidden">
+    <div className={`t-bg h-dvh max-w-[430px] mx-auto flex flex-col relative overflow-hidden transition-transform duration-300 ease-in ${leaving ? "translate-y-full" : ""}`}>
+      {/* Edge-to-edge animated backdrop — drifts while playing, still when paused */}
+      <div className="fixed inset-0 pointer-events-none" aria-hidden>
+        <div
+          className="absolute -top-[10%] -left-[15%] w-[75%] aspect-square rounded-full blur-3xl puff-blob-a"
+          style={{ background: current?.bg ?? "var(--primary-ct)", opacity: 0.55, animationPlayState: playing ? "running" : "paused" }}
+        />
+        <div
+          className="absolute -bottom-[12%] -right-[15%] w-[80%] aspect-square rounded-full blur-3xl puff-blob-b"
+          style={{ background: "var(--tertiary-ct)", opacity: 0.5, animationPlayState: playing ? "running" : "paused" }}
+        />
+      </div>
       <header className="fixed top-0 inset-x-0 z-50 pt-safe t-bg">
-        <div className="max-w-[430px] mx-auto h-16 px-5 flex items-center justify-between">
+        <div className="max-w-[430px] mx-auto h-16 px-5 flex items-center justify-between relative z-10">
           <div className="flex items-center gap-2">
-            <Link href="/" aria-label="Back" className="w-11 h-11 rounded-full t-container clay-card flex items-center justify-center min-w-[44px]">‹</Link>
+            <button onClick={dismiss} aria-label="Collapse player" className="w-11 h-11 rounded-full t-container clay-card flex items-center justify-center min-w-[44px]">
+              <Icon name="expand_more" />
+            </button>
             <h1 className="font-display font-bold text-[18px]">Now Playing</h1>
           </div>
         </div>
       </header>
 
-      <main className="flex-1 min-h-0 pt-16 pb-5 px-5 flex flex-col overflow-hidden">
-        <div className="absolute -top-16 -left-12 w-64 h-64 rounded-full bg-[#a6d7fe]/40 blur-3xl pointer-events-none" />
-        <div className="absolute top-44 -right-16 w-72 h-72 rounded-full bg-[#ffbbc2]/35 blur-3xl pointer-events-none" />
+      <main className="flex-1 min-h-0 pt-16 pb-3 px-5 flex flex-col overflow-hidden relative z-10">
 
         {!current ? (
           <div className="flex flex-col items-center text-center pt-4">
-            <div className="w-[min(74vw,300px,30dvh)] aspect-square rounded-[32px] p-4 t-card clay-card flex items-center justify-center shrink-0">
-              <div className="w-full h-full rounded-[22px] t-primary-ct flex items-center justify-center">
-                <Icon name="cloud" className="text-[72px]" fill />
-              </div>
+            <div className="w-[min(84vw,340px,38dvh)] aspect-square rounded-[18px] overflow-hidden flex items-center justify-center shrink-0 t-primary-ct">
+              <Icon name="cloud" className="text-[72px]" fill />
             </div>
             <h2 className="font-display font-bold text-[22px] mt-6">Nothing playing</h2>
             <p className="font-bold text-[14px] t-muted">Import tunes to begin</p>
@@ -180,28 +221,25 @@ export default function PlayerPage() {
           </div>
         ) : (
           <>
-            <div className="flex justify-center pt-1 pb-3 shrink-0">
-              <div className="relative w-[min(74vw,300px,30dvh)] aspect-square rounded-[32px] p-4 t-card clay-card flex items-center justify-center">
-                <div className="absolute top-6 left-8 right-8 h-8 rounded-full bg-gradient-to-b from-white/70 to-transparent pointer-events-none z-10" />
-                <div className="w-full h-full rounded-[22px] overflow-hidden flex items-center justify-center gap-2 text-[#4c3f70]" style={{ background: current.bg }}>
-                  {current.artwork && !artFailed ? (
-                    <img
-                      src={current.artwork}
-                      alt={title}
-                      className="w-full h-full rounded-[22px] object-cover"
-                      onError={() => setArtFailed(true)}
-                    />
-                  ) : (
-                    <>
-                      <Icon name={current.icon} className="text-[72px]" fill />
-                      <Icon name="music_note" className="text-[64px]" />
-                    </>
-                  )}
-                </div>
+            <div className="flex justify-center pt-1 pb-2 shrink-0">
+              <div className="relative w-[min(84vw,340px,38dvh)] aspect-square rounded-[18px] overflow-hidden flex items-center justify-center" style={{ background: current.bg }}>
+                {current.artwork && !artFailed ? (
+                  <img
+                    src={current.artwork}
+                    alt={title}
+                    className="w-full h-full object-cover"
+                    onError={() => setArtFailed(true)}
+                  />
+                ) : (
+                  <>
+                    <Icon name={current.icon} className="text-[72px]" fill />
+                    <Icon name="music_note" className="text-[64px]" />
+                  </>
+                )}
               </div>
             </div>
 
-            <div className="flex items-center justify-between mt-1 mb-3 shrink-0">
+            <div className="flex items-center justify-between mt-1 mb-2 shrink-0">
               <div className="min-w-0 pr-4">
                 <h2 className="font-display font-bold text-[22px] truncate">{title}</h2>
                 <p className="font-bold text-[14px] t-muted truncate">{artist}</p>
@@ -211,7 +249,7 @@ export default function PlayerPage() {
               </button>
             </div>
 
-            <div className="flex flex-col gap-2 mb-4 shrink-0">
+            <div className="flex flex-col gap-2 mb-3 shrink-0">
               <div className="relative w-full h-8 flex items-center cursor-pointer" onClick={handleSeek}>
                 <div className="w-full h-3 rounded-full t-variant shadow-[inset_2px_2px_4px_rgba(74,59,92,0.14)] p-[2px]">
                   <div className="h-full rounded-full bg-gradient-to-r from-[var(--secondary-ct)] via-[var(--primary-ct)] to-[var(--primary)]" style={{ width: `${pct}%` }} />
@@ -227,7 +265,7 @@ export default function PlayerPage() {
               </div>
             </div>
 
-            <div className="flex items-center justify-between px-2 mb-4 shrink-0">
+            <div className="flex items-center justify-between px-2 mb-3 shrink-0">
               <button
                 onClick={toggleShuffle}
                 aria-label="Shuffle"
