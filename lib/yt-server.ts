@@ -102,6 +102,25 @@ export function normalizeQuality(q: string | null | undefined): string {
   return "Good";
 }
 
+const CLIENTS = ["IOS", "TV", "TV_EMBEDDED", "YTMUSIC_ANDROID", "ANDROID", "WEB_EMBEDDED", "MWEB"] as const;
+
+export async function probeClients(id: string): Promise<Record<string, string>> {
+  const yt = await getTube();
+  const out: Record<string, string> = {};
+  for (const client of CLIENTS) {
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const info = (await yt.getInfo(id, { client })) as any;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const f: any = info.chooseFormat({ type: "audio", quality: "best" });
+      out[client] = f?.url ? `OK ${(f.url as string).length}` : "NO_URL";
+    } catch (e) {
+      out[client] = `ERR ${String(e).slice(0, 80)}`;
+    }
+  }
+  return out;
+}
+
 export async function getAudio(id: string, quality: string = "Good"): Promise<AudioRef> {
   if (!isValidVideoId(id)) throw new Error("bad-id");
   const q = normalizeQuality(quality);
@@ -110,9 +129,25 @@ export async function getAudio(id: string, quality: string = "Good"): Promise<Au
   if (hit && hit.exp > Date.now() && hit.ref.url) return hit.ref;
 
   const yt = await getTube();
-  // ONLY the IOS client yields stream URLs.
+  // ONLY some clients yield stream URLs; try in order (datacenter IPs get
+  // bot-checked on certain clients, so fall through on failure).
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const info = (await yt.getInfo(id, { client: "IOS" })) as any;
+  let info: any = null;
+  let lastErr = "";
+  for (const client of CLIENTS) {
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      info = (await yt.getInfo(id, { client })) as any;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const probe: any = info.chooseFormat({ type: "audio", quality: "best" });
+      if (probe?.url) break;
+      info = null;
+    } catch (e) {
+      lastErr = String(e).slice(0, 120);
+      info = null;
+    }
+  }
+  if (!info) throw new Error(`yt-audio-failed ${lastErr}`);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let format: any = info.chooseFormat({ type: "audio", quality: "best" });
 
