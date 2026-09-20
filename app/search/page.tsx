@@ -91,6 +91,13 @@ export default function SearchPage() {
   }, []);
 
   useEffect(() => {
+    try {
+      const q = new URLSearchParams(window.location.search).get("q");
+      if (q && !searchCache.query) setQuery(q);
+    } catch {}
+  }, []);
+
+  useEffect(() => {
     refresh();
     // Restore scroll + cached results from last visit.
     if (searchCache.scrollY > 0) {

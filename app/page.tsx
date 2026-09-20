@@ -4,15 +4,25 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { BottomNav, MiniPlayer, Icon } from "./components/Nav";
 import AppIcon from "./components/AppIcon";
-import { recentTracks, type SavedTrack } from "../lib/db";
-import { loadSettings, saveFileTracks } from "../lib/downloads";
+import { listTracks, recentTracks, type SavedTrack } from "../lib/db";
+import { loadSettings, saveAudiusTrack, saveFileTracks, saveSaavnTrack } from "../lib/downloads";
+import { audiusStreamUrl, trendingAudius, type OnlineResult } from "../lib/audius";
+import { searchSaavn, streamUrl, type SaavnResult } from "../lib/saavn";
 import { usePlayer } from "../lib/player-context";
 
 const MOODS = [
-  { title: "Happy", sub: "Sun-kissed beats", bg: "bg-[#FFF2B2]", dot: "bg-[#FFE580]", text: "text-[#574400]", subText: "text-[#7A6000]", icon: "sunny" },
-  { title: "Cozy", sub: "Warm hot cocoa", bg: "bg-[#FFD6B8]", dot: "bg-[#FFBE94]", text: "text-[#5A2B0F]", subText: "text-[#7B3F1B]", icon: "coffee" },
-  { title: "Focus", sub: "Gentle flow state", bg: "bg-[#C7F5DC]", dot: "bg-[#A8ECC4]", text: "text-[#144D32]", subText: "text-[#1E6B47]", icon: "spa" },
-  { title: "Dreamy", sub: "Bedtime melodies", bg: "bg-[#E2D4FF]", dot: "bg-[#CFBCFA]", text: "text-[#352561]", subText: "text-[#4A387E]", icon: "bedtime" },
+  { title: "Happy", sub: "Sun-kissed beats", bg: "bg-[#FFF2B2]", dot: "bg-[#FFE580]", text: "text-[#574400]", subText: "text-[#7A6000]", icon: "sunny", href: "/search?q=feel%20good%20hits" },
+  { title: "Cozy", sub: "Warm hot cocoa", bg: "bg-[#FFD6B8]", dot: "bg-[#FFBE94]", text: "text-[#5A2B0F]", subText: "text-[#7B3F1B]", icon: "coffee", href: "/search?q=cozy%20acoustic" },
+  { title: "Focus", sub: "Gentle flow state", bg: "bg-[#C7F5DC]", dot: "bg-[#A8ECC4]", text: "text-[#144D32]", subText: "text-[#1E6B47]", icon: "spa", href: "/search?q=deep%20focus" },
+  { title: "Dreamy", sub: "Bedtime melodies", bg: "bg-[#E2D4FF]", dot: "bg-[#CFBCFA]", text: "text-[#352561]", subText: "text-[#4A387E]", icon: "bedtime", href: "/search?q=sleep%20sounds" },
+];
+
+const GENRES = [
+  { label: "All", value: "" },
+  { label: "Electronic", value: "Electronic" },
+  { label: "Hip-Hop", value: "Hip-Hop" },
+  { label: "Lo-Fi", value: "Lo-Fi" },
+  { label: "R&B/Soul", value: "R&B/Soul" },
 ];
 
 export default function Home() {
@@ -20,7 +30,18 @@ export default function Home() {
   const [importStatus, setImportStatus] = useState("");
   const [artFail, setArtFail] = useState<Set<string>>(new Set());
   const fileRef = useRef<HTMLInputElement>(null);
-  const { current, playing, play } = usePlayer();
+  const { current, playing, play, preview, toggle } = usePlayer();
+
+  const [genre, setGenre] = useState("");
+  const [trending, setTrending] = useState<OnlineResult[]>([]);
+  const [trendingLoading, setTrendingLoading] = useState(false);
+  const [trendArtFail, setTrendArtFail] = useState<Set<string>>(new Set());
+  const [savedIds, setSavedIds] = useState<Set<string>>(new Set());
+  const [dlProg, setDlProg] = useState<Record<string, number>>({});
+  const [moreArtist, setMoreArtist] = useState("");
+  const [moreTracks, setMoreTracks] = useState<SaavnResult[]>([]);
+  const [moreLoading, setMoreLoading] = useState(false);
+  const [moreArtFail, setMoreArtFail] = useState<Set<string>>(new Set());
 
   const hour = new Date().getHours();
   const greeting = hour < 5 ? "Up late" : hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
@@ -31,12 +52,69 @@ export default function Home() {
     } catch {}
   }, []);
 
+  const fetchTrending = useCallback(async (g: string) => {
+    setTrendingLoading(true);
+    try {
+      setTrending(await trendingAudius(g, 10));
+    } catch {
+      setTrending([]);
+    } finally {
+      setTrendingLoading(false);
+    }
+  }, []);
+
+  const fetchMore = useCallback(async () => {
+    let tracks: SavedTrack[] = [];
+    try {
+      tracks = await listTracks();
+    } catch {
+      return;
+    }
+    setSavedIds(new Set(tracks.map((t) => t.id)));
+    const counts = new Map<string, { name: string; n: number }>();
+    for (const t of tracks) {
+      const name = (t.artist || "").trim();
+      if (!name) continue;
+      const key = name.toLowerCase();
+      const prev = counts.get(key);
+      counts.set(key, { name, n: (prev?.n || 0) + 1 });
+    }
+    let top = "";
+    let topN = 0;
+    for (const { name, n } of counts.values()) {
+      if (n > topN) {
+        topN = n;
+        top = name;
+      }
+    }
+    if (!top) {
+      setMoreArtist("");
+      setMoreTracks([]);
+      return;
+    }
+    setMoreArtist(top);
+    setMoreLoading(true);
+    try {
+      setMoreTracks(await searchSaavn(top, 10));
+    } catch {
+      setMoreTracks([]);
+    } finally {
+      setMoreLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
     refresh();
-    const onFocus = () => refresh();
+    fetchTrending(genre);
+    fetchMore();
+    const onFocus = () => {
+      refresh();
+      fetchTrending(genre);
+      fetchMore();
+    };
     window.addEventListener("focus", onFocus);
     return () => window.removeEventListener("focus", onFocus);
-  }, [refresh]);
+  }, [refresh, fetchTrending, fetchMore, genre]);
 
   const handleFiles = async (files: FileList | null) => {
     if (!files || files.length === 0) return;
@@ -50,6 +128,94 @@ export default function Home() {
       setImportStatus(err instanceof Error ? err.message : "Import failed");
     }
     if (fileRef.current) fileRef.current.value = "";
+  };
+
+  const handlePreviewAudius = async (r: OnlineResult) => {
+    const id = `audius-${r.sourceId}`;
+    if (current?.id === id) {
+      await toggle();
+      return;
+    }
+    try {
+      await preview(
+        {
+          id,
+          title: r.title,
+          artist: r.artist,
+          durationSec: r.durationSec,
+          icon: "music_note",
+          bg: "#E9DCFF",
+          artwork: r.artwork,
+          source: "audius",
+          sourceId: r.sourceId,
+        },
+        audiusStreamUrl(r.sourceId)
+      );
+    } catch {}
+  };
+
+  const handlePreviewSaavn = async (r: SaavnResult) => {
+    const id = `saavn-${r.id}`;
+    if (current?.id === id) {
+      await toggle();
+      return;
+    }
+    try {
+      await preview(
+        {
+          id,
+          title: r.title,
+          artist: r.artist,
+          durationSec: r.durationSec,
+          icon: "music_note",
+          bg: "#FFE0D6",
+          artwork: r.artwork,
+          album: r.album,
+          year: r.year,
+          source: "saavn",
+          sourceId: r.id,
+        },
+        streamUrl(r, loadSettings().quality)
+      );
+    } catch {}
+  };
+
+  const handleSaveAudius = async (r: OnlineResult) => {
+    const key = `audius-${r.sourceId}`;
+    if (savedIds.has(key) || dlProg[key] !== undefined) return;
+    setDlProg((prev) => ({ ...prev, [key]: 0 }));
+    try {
+      await saveAudiusTrack(r, loadSettings().quality, (p) =>
+        setDlProg((prev) => ({ ...prev, [key]: p }))
+      );
+      try {
+        setSavedIds(new Set((await listTracks()).map((t) => t.id)));
+      } catch {}
+    } catch {}
+    setDlProg((prev) => {
+      const next = { ...prev };
+      delete next[key];
+      return next;
+    });
+  };
+
+  const handleSaveSaavn = async (r: SaavnResult) => {
+    const key = `saavn-${r.id}`;
+    if (savedIds.has(key) || dlProg[key] !== undefined) return;
+    setDlProg((prev) => ({ ...prev, [key]: 0 }));
+    try {
+      await saveSaavnTrack(r, loadSettings().quality, (p) =>
+        setDlProg((prev) => ({ ...prev, [key]: p }))
+      );
+      try {
+        setSavedIds(new Set((await listTracks()).map((t) => t.id)));
+      } catch {}
+    } catch {}
+    setDlProg((prev) => {
+      const next = { ...prev };
+      delete next[key];
+      return next;
+    });
   };
 
   return (
@@ -72,6 +238,189 @@ export default function Home() {
         <div className="px-5 pt-3">
           <p className="font-display font-bold text-[18px]">{greeting}</p>
         </div>
+
+        <div className="mt-4">
+          <div className="px-5 flex items-center justify-between mb-2">
+            <p className="font-display font-bold text-[22px]">Trending now</p>
+          </div>
+          <div className="flex gap-2 overflow-x-auto px-5 pb-3 no-scrollbar">
+            {GENRES.map((g) => {
+              const active = genre === g.value;
+              return (
+                <button
+                  key={g.label}
+                  onClick={() => setGenre(g.value)}
+                  className={`h-9 px-4 rounded-full font-display font-bold text-[13px] shrink-0 min-h-[36px] ${
+                    active ? "t-primary clay-button-active" : "t-card clay-card"
+                  }`}
+                >
+                  {g.label}
+                </button>
+              );
+            })}
+          </div>
+          {trendingLoading && trending.length === 0 ? (
+            <p className="text-[13px] font-bold t-muted px-5">Catching fresh tracks...</p>
+          ) : trending.length === 0 ? (
+            <p className="text-[13px] font-bold t-muted px-5">Nothing trending right now.</p>
+          ) : (
+            <div className="flex gap-4 overflow-x-auto px-5 pb-3 pt-1 no-scrollbar">
+              {trending.map((r) => {
+                const id = `audius-${r.sourceId}`;
+                const isCurrent = current?.id === id && playing;
+                const showArt = !!r.artwork && !trendArtFail.has(r.sourceId);
+                const isSaved = savedIds.has(id);
+                const prog = dlProg[id];
+                const isDownloading = prog !== undefined;
+                return (
+                  <div key={r.sourceId} className="flex flex-col gap-2 shrink-0 w-[140px] text-left">
+                    <div className="relative w-[140px] h-[140px] rounded-[28px] p-2 clay-card t-card flex items-center justify-center">
+                      {showArt ? (
+                        <img
+                          src={r.artwork as string}
+                          alt=""
+                          className="w-full h-full rounded-[20px] object-cover"
+                          onError={() => setTrendArtFail((prev) => new Set(prev).add(r.sourceId))}
+                        />
+                      ) : (
+                        <div className="w-full h-full rounded-[20px] bg-white/70 flex items-center justify-center text-[#4c3f70]">
+                          <Icon name="music_note" fill className="text-[56px]" />
+                        </div>
+                      )}
+                      <button
+                        onClick={() => handlePreviewAudius(r)}
+                        aria-label={isCurrent ? `Pause ${r.title}` : `Play ${r.title}`}
+                        className="absolute bottom-3 right-3 w-9 h-9 rounded-full t-primary clay-thumb flex items-center justify-center"
+                      >
+                        <Icon name={isCurrent ? "pause" : "play_arrow"} fill className="text-[20px]" />
+                      </button>
+                      {isSaved ? (
+                        <span aria-label="Saved" className="absolute top-3 right-3 w-8 h-8 rounded-full bg-[#c7f5dc] clay-thumb flex items-center justify-center text-[#144d32]">
+                          <Icon name="check" className="text-[18px]" />
+                        </span>
+                      ) : isDownloading ? (
+                        <span className="absolute top-3 right-3 w-8 h-8 rounded-full t-container clay-thumb flex items-center justify-center">
+                          <svg className="w-8 h-8 -rotate-90" viewBox="0 0 44 44">
+                            <circle cx="22" cy="22" r="17" stroke="#eedbff" strokeWidth="4" fill="none" />
+                            <circle
+                              cx="22"
+                              cy="22"
+                              r="17"
+                              stroke="#306385"
+                              strokeWidth="4"
+                              fill="none"
+                              strokeDasharray="106.8"
+                              strokeDashoffset={106.8 * (1 - prog / 100)}
+                              strokeLinecap="round"
+                            />
+                          </svg>
+                          <span className="absolute text-[8px] font-bold">{prog}%</span>
+                        </span>
+                      ) : (
+                        <button
+                          onClick={() => handleSaveAudius(r)}
+                          aria-label={`Download ${r.title}`}
+                          className="absolute top-3 right-3 w-8 h-8 rounded-full t-card clay-thumb flex items-center justify-center"
+                        >
+                          <Icon name="download" className="text-[18px]" />
+                        </button>
+                      )}
+                    </div>
+                    <div className="px-1">
+                      <p className="font-display font-bold text-[14px] truncate">{r.title}</p>
+                      <p className="text-[12px] t-muted truncate">{r.artist}</p>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+          {trendingLoading && trending.length > 0 && (
+            <p className="text-[12px] font-bold t-muted px-5 pb-1">Catching fresh tracks...</p>
+          )}
+        </div>
+
+        {moreArtist !== "" && (
+          <div className="mt-4">
+            <div className="px-5 flex items-center justify-between mb-2">
+              <p className="font-display font-bold text-[22px]">More like {moreArtist}</p>
+            </div>
+            {moreLoading && moreTracks.length === 0 ? (
+              <p className="text-[13px] font-bold t-muted px-5">Catching fresh tracks...</p>
+            ) : moreTracks.length === 0 ? null : (
+              <div className="flex gap-4 overflow-x-auto px-5 pb-3 pt-1 no-scrollbar">
+                {moreTracks.map((r) => {
+                  const id = `saavn-${r.id}`;
+                  const isCurrent = current?.id === id && playing;
+                  const showArt = !!r.artwork && !moreArtFail.has(r.id);
+                  const isSaved = savedIds.has(id);
+                  const prog = dlProg[id];
+                  const isDownloading = prog !== undefined;
+                  return (
+                    <div key={r.id} className="flex flex-col gap-2 shrink-0 w-[140px] text-left">
+                      <div className="relative w-[140px] h-[140px] rounded-[28px] p-2 clay-card t-card flex items-center justify-center">
+                        {showArt ? (
+                          <img
+                            src={r.artwork as string}
+                            alt=""
+                            className="w-full h-full rounded-[20px] object-cover"
+                            onError={() => setMoreArtFail((prev) => new Set(prev).add(r.id))}
+                          />
+                        ) : (
+                          <div className="w-full h-full rounded-[20px] bg-white/70 flex items-center justify-center text-[#4c3f70]">
+                            <Icon name="music_note" fill className="text-[56px]" />
+                          </div>
+                        )}
+                        <button
+                          onClick={() => handlePreviewSaavn(r)}
+                          aria-label={isCurrent ? `Pause ${r.title}` : `Play ${r.title}`}
+                          className="absolute bottom-3 right-3 w-9 h-9 rounded-full t-primary clay-thumb flex items-center justify-center"
+                        >
+                          <Icon name={isCurrent ? "pause" : "play_arrow"} fill className="text-[20px]" />
+                        </button>
+                        {isSaved ? (
+                          <span aria-label="Saved" className="absolute top-3 right-3 w-8 h-8 rounded-full bg-[#c7f5dc] clay-thumb flex items-center justify-center text-[#144d32]">
+                            <Icon name="check" className="text-[18px]" />
+                          </span>
+                        ) : isDownloading ? (
+                          <span className="absolute top-3 right-3 w-8 h-8 rounded-full t-container clay-thumb flex items-center justify-center">
+                            <svg className="w-8 h-8 -rotate-90" viewBox="0 0 44 44">
+                              <circle cx="22" cy="22" r="17" stroke="#eedbff" strokeWidth="4" fill="none" />
+                              <circle
+                                cx="22"
+                                cy="22"
+                                r="17"
+                                stroke="#306385"
+                                strokeWidth="4"
+                                fill="none"
+                                strokeDasharray="106.8"
+                                strokeDashoffset={106.8 * (1 - prog / 100)}
+                                strokeLinecap="round"
+                              />
+                            </svg>
+                            <span className="absolute text-[8px] font-bold">{prog}%</span>
+                          </span>
+                        ) : (
+                          <button
+                            onClick={() => handleSaveSaavn(r)}
+                            aria-label={`Download ${r.title}`}
+                            className="absolute top-3 right-3 w-8 h-8 rounded-full t-card clay-thumb flex items-center justify-center"
+                          >
+                            <Icon name="download" className="text-[18px]" />
+                          </button>
+                        )}
+                      </div>
+                      <div className="px-1">
+                        <p className="font-display font-bold text-[14px] truncate">{r.title}</p>
+                        <p className="text-[12px] t-muted truncate">{r.artist}</p>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
 
         <div className="mt-6">
           <div className="px-5 flex items-center justify-between mb-2">
@@ -172,7 +521,7 @@ export default function Home() {
           </div>
           <div className="grid grid-cols-2 gap-3">
             {MOODS.map((m) => (
-              <button key={m.title} className={`${m.bg} h-28 rounded-2xl p-3.5 clay-card flex flex-col justify-between text-left active:scale-95 transition-transform min-h-[112px]`}>
+              <Link key={m.title} href={m.href} className={`${m.bg} h-28 rounded-2xl p-3.5 clay-card flex flex-col justify-between text-left active:scale-95 transition-transform min-h-[112px]`}>
                 <div className="flex items-start justify-between">
                   <span className={`w-10 h-10 rounded-full ${m.dot} flex items-center justify-center text-[#231534]`}>
                     <Icon name={m.icon} fill />
@@ -183,7 +532,7 @@ export default function Home() {
                   <p className={`font-display font-bold text-[18px] ${m.text}`}>{m.title}</p>
                   <p className={`text-[11px] font-bold ${m.subText}`}>{m.sub}</p>
                 </div>
-              </button>
+              </Link>
             ))}
           </div>
         </div>
