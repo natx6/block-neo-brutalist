@@ -68,7 +68,7 @@ export default function Home() {
         </div>
       </header>
 
-      <main className="flex-1 min-h-0 pt-16 pb-[180px] overflow-y-auto overscroll-contain">
+      <main className="flex-1 min-h-0 pt-[calc(4rem+env(safe-area-inset-top))] pb-[calc(160px+env(safe-area-inset-bottom))] overflow-y-auto overscroll-contain">
         <div className="px-5 pt-3">
           <p className="font-display font-bold text-[18px]">{greeting}</p>
         </div>

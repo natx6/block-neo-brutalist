@@ -74,7 +74,7 @@ function PlaylistInner() {
           </div>
         </div>
       </header>
-      <main className="flex-1 min-h-0 pt-20 pb-10 px-5 flex flex-col gap-4 overflow-y-auto overscroll-contain">
+      <main className="flex-1 min-h-0 pt-[calc(5rem+env(safe-area-inset-top))] pb-10 px-5 flex flex-col gap-4 overflow-y-auto overscroll-contain">
         <div className="rounded-[28px] bg-gradient-to-br from-[var(--primary-ct)] to-[var(--secondary-ct)] clay-card p-6 flex flex-col items-center text-center">
           <div className="w-32 h-32 rounded-[24px] t-card clay-card flex items-center justify-center">
             <Icon name="cloud" className="text-[64px]" fill />

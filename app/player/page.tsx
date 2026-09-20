@@ -205,7 +205,7 @@ export default function PlayerPage() {
         </div>
       </header>
 
-      <main className="flex-1 min-h-0 pt-16 pb-3 px-5 flex flex-col overflow-hidden relative z-10">
+      <main className="flex-1 min-h-0 pt-[calc(4rem+env(safe-area-inset-top))] pb-3 px-5 flex flex-col overflow-hidden relative z-10">
 
         {!current ? (
           <div className="flex flex-col items-center text-center pt-4">

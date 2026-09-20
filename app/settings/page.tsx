@@ -88,7 +88,7 @@ export default function SettingsPage() {
           <h1 className="font-display font-bold text-[18px]">Settings</h1>
         </div>
       </header>
-      <main className="flex-1 min-h-0 pt-20 pb-10 px-5 flex flex-col gap-4 overflow-y-auto overscroll-contain">
+      <main className="flex-1 min-h-0 pt-[calc(5rem+env(safe-area-inset-top))] pb-10 px-5 flex flex-col gap-4 overflow-y-auto overscroll-contain">
         <div className="t-card rounded-2xl p-4 clay-card">
           <button
             type="button"
