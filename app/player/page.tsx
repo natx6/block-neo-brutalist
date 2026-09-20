@@ -150,7 +150,7 @@ export default function PlayerPage() {
   };
 
   return (
-    <div className="t-bg min-h-dvh max-w-[430px] mx-auto flex flex-col relative overflow-hidden">
+    <div className="t-bg h-dvh max-w-[430px] mx-auto flex flex-col relative overflow-hidden">
       <header className="fixed top-0 inset-x-0 z-50 pt-safe t-bg">
         <div className="max-w-[430px] mx-auto h-16 px-5 flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -160,13 +160,13 @@ export default function PlayerPage() {
         </div>
       </header>
 
-      <main className="flex-1 pt-16 pb-10 px-5">
+      <main className="flex-1 min-h-0 pt-16 pb-5 px-5 flex flex-col overflow-hidden">
         <div className="absolute -top-16 -left-12 w-64 h-64 rounded-full bg-[#a6d7fe]/40 blur-3xl pointer-events-none" />
         <div className="absolute top-44 -right-16 w-72 h-72 rounded-full bg-[#ffbbc2]/35 blur-3xl pointer-events-none" />
 
         {!current ? (
-          <div className="flex flex-col items-center text-center pt-10">
-            <div className="w-full max-w-[340px] aspect-square rounded-[32px] p-4 t-card clay-card flex items-center justify-center">
+          <div className="flex flex-col items-center text-center pt-4">
+            <div className="w-[min(74vw,300px,30dvh)] aspect-square rounded-[32px] p-4 t-card clay-card flex items-center justify-center shrink-0">
               <div className="w-full h-full rounded-[22px] t-primary-ct flex items-center justify-center">
                 <Icon name="cloud" className="text-[72px]" fill />
               </div>
@@ -180,8 +180,8 @@ export default function PlayerPage() {
           </div>
         ) : (
           <>
-            <div className="flex justify-center pt-2 pb-6">
-              <div className="relative w-full max-w-[340px] aspect-square rounded-[32px] p-4 t-card clay-card flex items-center justify-center">
+            <div className="flex justify-center pt-1 pb-3 shrink-0">
+              <div className="relative w-[min(74vw,300px,30dvh)] aspect-square rounded-[32px] p-4 t-card clay-card flex items-center justify-center">
                 <div className="absolute top-6 left-8 right-8 h-8 rounded-full bg-gradient-to-b from-white/70 to-transparent pointer-events-none z-10" />
                 <div className="w-full h-full rounded-[22px] overflow-hidden flex items-center justify-center gap-2 text-[#4c3f70]" style={{ background: current.bg }}>
                   {current.artwork && !artFailed ? (
@@ -201,7 +201,7 @@ export default function PlayerPage() {
               </div>
             </div>
 
-            <div className="flex items-center justify-between mt-2 mb-6">
+            <div className="flex items-center justify-between mt-1 mb-3 shrink-0">
               <div className="min-w-0 pr-4">
                 <h2 className="font-display font-bold text-[22px] truncate">{title}</h2>
                 <p className="font-bold text-[14px] t-muted truncate">{artist}</p>
@@ -211,7 +211,7 @@ export default function PlayerPage() {
               </button>
             </div>
 
-            <div className="flex flex-col gap-2 mb-8">
+            <div className="flex flex-col gap-2 mb-4 shrink-0">
               <div className="relative w-full h-8 flex items-center cursor-pointer" onClick={handleSeek}>
                 <div className="w-full h-3 rounded-full t-variant shadow-[inset_2px_2px_4px_rgba(74,59,92,0.14)] p-[2px]">
                   <div className="h-full rounded-full bg-gradient-to-r from-[var(--secondary-ct)] via-[var(--primary-ct)] to-[var(--primary)]" style={{ width: `${pct}%` }} />
@@ -227,7 +227,7 @@ export default function PlayerPage() {
               </div>
             </div>
 
-            <div className="flex items-center justify-between px-2 mb-8">
+            <div className="flex items-center justify-between px-2 mb-4 shrink-0">
               <button
                 onClick={toggleShuffle}
                 aria-label="Shuffle"
@@ -288,8 +288,6 @@ export default function PlayerPage() {
             <span className="font-display font-bold text-[11px]">Queue</span>
           </Link>
         </div>
-
-        <Link href="/" className="block text-center mt-6 font-display font-bold text-[12px] t-primary-text">Back Home</Link>
       </main>
 
       {showAdd && (
