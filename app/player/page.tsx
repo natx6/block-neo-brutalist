@@ -182,19 +182,23 @@ export default function PlayerPage() {
   };
 
   return (
-    <div className={`t-bg h-dvh max-w-[430px] mx-auto flex flex-col relative overflow-hidden transition-transform duration-300 ease-in ${leaving ? "translate-y-full" : ""}`}>
+    <div className={`max-w-[430px] mx-auto flex flex-col relative overflow-hidden h-dvh transition-transform duration-300 ease-in ${leaving ? "translate-y-full" : ""}`} style={{ background: "linear-gradient(180deg, var(--bg) 0%, var(--container) 55%, var(--bg) 100%)" }}>
       {/* Edge-to-edge animated backdrop — drifts while playing, still when paused */}
       <div className="fixed inset-0 pointer-events-none" aria-hidden>
         <div
-          className="absolute -top-[10%] -left-[15%] w-[75%] aspect-square rounded-full blur-3xl puff-blob-a"
-          style={{ background: current?.bg ?? "var(--primary-ct)", opacity: 0.55, animationPlayState: playing ? "running" : "paused" }}
+          className="absolute -top-[8%] -left-[20%] w-[90%] aspect-square rounded-full blur-3xl puff-blob-a"
+          style={{ background: current?.bg ?? "var(--primary-ct)", opacity: 0.6, animationPlayState: playing ? "running" : "paused" }}
         />
         <div
-          className="absolute -bottom-[12%] -right-[15%] w-[80%] aspect-square rounded-full blur-3xl puff-blob-b"
-          style={{ background: "var(--tertiary-ct)", opacity: 0.5, animationPlayState: playing ? "running" : "paused" }}
+          className="absolute top-[30%] -right-[20%] w-[85%] aspect-square rounded-full blur-3xl puff-blob-b"
+          style={{ background: "var(--tertiary-ct)", opacity: 0.55, animationPlayState: playing ? "running" : "paused" }}
+        />
+        <div
+          className="absolute -bottom-[10%] -left-[10%] w-[70%] aspect-square rounded-full blur-3xl puff-blob-a"
+          style={{ background: "var(--secondary-ct)", opacity: 0.45, animationPlayState: playing ? "running" : "paused", animationDelay: "-7s" }}
         />
       </div>
-      <header className="fixed top-0 inset-x-0 z-50 pt-safe t-bg">
+      <header className="fixed top-0 inset-x-0 z-50 pt-safe bg-transparent">
         <div className="max-w-[430px] mx-auto h-16 px-5 flex items-center justify-between relative z-10">
           <div className="flex items-center gap-2">
             <button onClick={dismiss} aria-label="Collapse player" className="w-11 h-11 rounded-full t-container clay-card flex items-center justify-center min-w-[44px]">
@@ -265,7 +269,7 @@ export default function PlayerPage() {
               </div>
             </div>
 
-            <div className="flex items-center justify-between px-2 mb-3 shrink-0">
+            <div className="flex items-center justify-between px-2 mb-6 shrink-0">
               <button
                 onClick={toggleShuffle}
                 aria-label="Shuffle"
