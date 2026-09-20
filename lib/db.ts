@@ -4,6 +4,7 @@ export interface SavedTrack {
   id: string;
   title: string;
   artist: string;
+  album?: string;
   durationSec: number;
   icon: string;
   bg: string;

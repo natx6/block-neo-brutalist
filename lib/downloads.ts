@@ -3,6 +3,8 @@ import { ART_FALLBACKS, cleanFileTitle } from "./catalog";
 import { audiusStreamUrl, type OnlineResult } from "./audius";
 import { streamUrl, type SaavnResult } from "./saavn";
 
+import { parseBlob } from "music-metadata-browser";
+
 export async function downloadWithProgress(
   url: string,
   onProgress: (pct: number, loaded: number, total: number) => void
@@ -47,22 +49,70 @@ function fallbackArt(index: number) {
   return ART_FALLBACKS[index % ART_FALLBACKS.length];
 }
 
+interface EmbeddedTags {
+  title?: string;
+  artist?: string;
+  album?: string;
+  artwork?: string | null;
+}
+
+// Read ID3/MP4/Vorbis tags (incl. embedded cover art) from a local file.
+// Never throws — returns {} on any failure or after 8s.
+async function readEmbeddedTags(file: Blob): Promise<EmbeddedTags> {
+  try {
+    const meta = await Promise.race([
+      parseBlob(file),
+      new Promise<null>((resolve) => setTimeout(() => resolve(null), 8000)),
+    ]);
+    if (!meta) return {};
+    const common = meta.common || {};
+    let artwork: string | null = null;
+    const pic = common.picture?.[0];
+    if (pic?.data?.length) {
+      const bytes = pic.data as Uint8Array;
+      let binary = "";
+      const CHUNK = 8192;
+      for (let i = 0; i < bytes.length; i += CHUNK) {
+        binary += String.fromCharCode.apply(null, Array.from(bytes.subarray(i, i + CHUNK)));
+      }
+      const mime = typeof pic.format === "string" && pic.format.includes("/") ? pic.format : "image/jpeg";
+      artwork = `data:${mime};base64,${btoa(binary)}`;
+    }
+    const artist = Array.isArray(common.artists) && common.artists.length
+      ? common.artists.join(", ")
+      : typeof common.artist === "string" ? common.artist : undefined;
+    return {
+      title: typeof common.title === "string" ? common.title : undefined,
+      artist,
+      album: typeof common.album === "string" ? common.album : undefined,
+      artwork,
+    };
+  } catch {
+    return {};
+  }
+}
+
 export async function saveFileTracks(files: FileList | File[], quality = "Good") {
   const arr = Array.from(files).filter((f) => f && f.size > 0);
   if (arr.length === 0) throw new Error("No files picked");
   const saved = [];
   for (let i = 0; i < arr.length; i++) {
     const f = arr[i];
-    const { title, artist } = cleanFileTitle(f.name);
-    const durationSec = await probeDuration(f);
+    const fallback = cleanFileTitle(f.name);
+    const [tags, durationSec] = await Promise.all([
+      readEmbeddedTags(f),
+      probeDuration(f),
+    ]);
     const art = fallbackArt(Date.now() % 1000 + i);
     const rec = {
       id: typeof crypto !== "undefined" && "randomUUID" in crypto ? crypto.randomUUID() : `${Date.now()}-${i}`,
-      title,
-      artist,
+      title: tags.title || fallback.title,
+      artist: tags.artist || fallback.artist,
+      album: tags.album || "",
       durationSec,
       icon: art.icon,
       bg: art.bg,
+      artwork: tags.artwork ?? null,
       blob: f,
       mime: f.type || "audio/mpeg",
       size: f.size,
