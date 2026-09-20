@@ -20,7 +20,7 @@ const MOODS = [
 const GENRES = [
   { label: "All", value: "" },
   { label: "Electronic", value: "Electronic" },
-  { label: "Hip-Hop", value: "Hip-Hop" },
+  { label: "Hip-Hop", value: "Hip-Hop/Rap" },
   { label: "Lo-Fi", value: "Lo-Fi" },
   { label: "R&B/Soul", value: "R&B/Soul" },
 ];
@@ -234,7 +234,7 @@ export default function Home() {
         </div>
       </header>
 
-      <main className="flex-1 min-h-0 pt-[calc(4rem+env(safe-area-inset-top))] pb-[calc(160px+env(safe-area-inset-bottom))] overflow-y-auto overscroll-contain">
+      <main className="flex-1 min-h-0 pt-[calc(4rem+env(safe-area-inset-top))] pb-[150px] overflow-y-auto overscroll-contain">
         <div className="px-5 pt-3">
           <p className="font-display font-bold text-[18px]">{greeting}</p>
         </div>
@@ -503,9 +503,11 @@ export default function Home() {
             <input
               ref={fileRef}
               type="file"
-              accept="audio/*"
+              accept="audio/*,.mp3,.m4a,.wav,.ogg,.flac,.aac,.opus,.weba"
               multiple
-              className="hidden"
+              tabIndex={-1}
+              aria-hidden
+              className="absolute w-px h-px opacity-0 overflow-hidden pointer-events-none"
               onChange={(e) => handleFiles(e.target.files)}
             />
             {importStatus && (

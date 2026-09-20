@@ -54,7 +54,7 @@ export default function OfflinePage() {
   return (
     <div className="t-bg h-dvh max-w-[430px] mx-auto flex flex-col relative overflow-hidden">
       <TopBar title="Offline" />
-      <main className="flex-1 min-h-0 pt-[calc(4rem+env(safe-area-inset-top))] pb-[calc(160px+env(safe-area-inset-bottom))] px-5 flex flex-col gap-4 overflow-y-auto overscroll-contain">
+      <main className="flex-1 min-h-0 pt-[calc(4rem+env(safe-area-inset-top))] pb-[150px] px-5 flex flex-col gap-4 overflow-y-auto overscroll-contain">
         <div className="pt-3" />
 
         <div className="w-full t-surface rounded-2xl p-4 clay-card flex flex-col gap-2">

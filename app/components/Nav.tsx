@@ -20,7 +20,7 @@ export function MiniPlayer() {
     setArtFailed(false);
   }, [current?.id]);
   return (
-    <aside className="fixed inset-x-0 z-40 px-5 pointer-events-none" style={{ bottom: "calc(4.75rem + env(safe-area-inset-bottom, 0px))" }}>
+    <aside className="fixed inset-x-0 z-40 px-5 pointer-events-none" style={{ bottom: "4.75rem" }}>
       <div className="pointer-events-auto mx-auto max-w-[390px] h-[64px] t-card-95 rounded-full px-3 flex items-center justify-between clay-pill">
         <Link href="/player" className="flex items-center gap-3 min-w-0 flex-1" onClick={() => setArtFailed(false)}>
           {showArt ? (
@@ -65,7 +65,7 @@ const TABS = [
 
 export function BottomNav({ active }: { active: string }) {
   return (
-    <nav className="fixed bottom-0 inset-x-0 z-50 px-5 pointer-events-none" style={{ paddingBottom: "env(safe-area-inset-bottom, 0px)" }}>
+    <nav className="fixed bottom-0 inset-x-0 z-50 px-5 pointer-events-none" style={{ paddingBottom: 0 }}>
       <div className="pointer-events-auto mx-auto max-w-[390px] h-16 t-card-90 rounded-full px-2 flex items-center justify-around clay-pill">
         {TABS.map((t) => (
           <Link
