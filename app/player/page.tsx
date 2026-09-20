@@ -269,7 +269,7 @@ export default function PlayerPage() {
               </div>
             </div>
 
-            <div className="flex items-center justify-between px-2 mb-6 shrink-0">
+            <div className="flex items-center justify-between px-2 mb-8 shrink-0">
               <button
                 onClick={toggleShuffle}
                 aria-label="Shuffle"
@@ -299,7 +299,7 @@ export default function PlayerPage() {
           </>
         )}
 
-        <div className="w-full t-container-60 rounded-[28px] p-3 clay-card flex items-center justify-around">
+        <div className="w-full px-1 py-2 flex items-center justify-around shrink-0">
           <button
             onClick={handleSave}
             disabled={!current || isSaved || savePct !== null}
