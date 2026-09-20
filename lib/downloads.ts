@@ -1,7 +1,7 @@
 import { db } from "./db";
 import { ART_FALLBACKS, cleanFileTitle } from "./catalog";
 import { audiusStreamUrl, type OnlineResult } from "./audius";
-import { ytAudioUrl } from "./youtube";
+import { streamUrl, type SaavnResult } from "./saavn";
 
 export async function downloadWithProgress(
   url: string,
@@ -159,53 +159,44 @@ export function storeSettings(s: Settings) {
   } catch {}
 }
 
-export async function saveYouTubeTrack(
-  r: { videoId: string; title: string; artist: string; durationSec: number; artwork: string | null },
+export async function saveSaavnTrack(
+  r: SaavnResult,
   quality = "Good",
   onProgress?: (pct: number) => void
 ) {
-  const id = `yt-${r.videoId}`;
+  const id = `saavn-${r.id}`;
   const existing = await db.tracks.get(id);
   if (existing) return existing;
-  const res = await fetch(ytAudioUrl(r.videoId, quality));
-  if (!res.ok) throw new Error("yt-download-failed");
-  let blob: Blob;
-  if (!res.body) {
-    blob = await res.blob();
-  } else {
-    const total = Number(res.headers.get("content-length") || 0);
-    const reader = res.body.getReader();
-    const chunks: BlobPart[] = [];
-    let loaded = 0;
-    for (;;) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      chunks.push(value);
-      loaded += value.length;
-      onProgress?.(total ? Math.round((loaded / total) * 100) : 0);
+  const urls = quality === "Lite" ? [r.url] : [...new Set([streamUrl(r, quality), r.url])];
+  let lastError: unknown = null;
+  for (const u of urls) {
+    try {
+      const blob = await downloadWithProgress(u, (p) => onProgress?.(p));
+      if (blob.size < 1024) throw new Error("saavn-download-failed");
+      const probed = await probeDuration(blob);
+      const art = fallbackArt(Date.now() % 1000);
+      const rec = {
+        id,
+        title: r.title,
+        artist: r.artist,
+        durationSec: probed || r.durationSec,
+        icon: "music_note",
+        bg: art.bg,
+        artwork: r.artwork,
+        source: "saavn",
+        sourceId: r.id,
+        blob,
+        mime: blob.type || "audio/mpeg",
+        size: blob.size,
+        quality,
+        addedAt: Date.now(),
+        playCount: 0,
+      };
+      await db.tracks.put(rec);
+      return rec;
+    } catch (e) {
+      lastError = e;
     }
-    blob = new Blob(chunks, { type: res.headers.get("content-type") || "audio/mp4" });
   }
-  if (blob.size < 1024) throw new Error("yt-download-failed");
-  const probed = await probeDuration(blob);
-  const art = fallbackArt(Date.now() % 1000);
-  const rec = {
-    id,
-    title: r.title,
-    artist: r.artist,
-    durationSec: probed || r.durationSec,
-    icon: "music_note",
-    bg: art.bg,
-    artwork: r.artwork,
-    source: "youtube",
-    sourceId: r.videoId,
-    blob,
-    mime: blob.type || "audio/mp4",
-    size: blob.size,
-    quality,
-    addedAt: Date.now(),
-    playCount: 0,
-  };
-  await db.tracks.put(rec);
-  return rec;
+  throw lastError instanceof Error ? lastError : new Error("saavn-download-failed");
 }

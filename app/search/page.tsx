@@ -8,29 +8,27 @@ import {
   loadSettings,
   saveAudiusTrack,
   saveFileTracks,
+  saveSaavnTrack,
   saveUrlTrack,
-  saveYouTubeTrack,
 } from "../../lib/downloads";
 import { audiusStreamUrl, searchAudius, type OnlineResult } from "../../lib/audius";
-import {
-  searchYouTube,
-  ytPreviewUrl,
-  type YTResult,
-} from "../../lib/youtube";
+import { searchSaavn, streamUrl, type SaavnResult } from "../../lib/saavn";
 import { loadSpCreds, spCanonical, type SpCanonical } from "../../lib/spotify";
 import { usePlayer } from "../../lib/player-context";
 
-function ytMeta(r: YTResult) {
+function saavnMeta(r: SaavnResult) {
   return {
-    id: `yt-${r.videoId}`,
+    id: `saavn-${r.id}`,
     title: r.title,
     artist: r.artist,
     durationSec: r.durationSec,
     icon: "music_note",
     bg: "#FFE0D6",
     artwork: r.artwork,
-    source: "youtube" as const,
-    sourceId: r.videoId,
+    album: r.album,
+    year: r.year,
+    source: "saavn" as const,
+    sourceId: r.id,
   };
 }
 
@@ -55,12 +53,11 @@ export default function SearchPage() {
   const [saved, setSaved] = useState<SavedTrack[]>([]);
   const [savedIds, setSavedIds] = useState<Set<string>>(new Set());
   const [online, setOnline] = useState<OnlineResult[]>([]);
-  const [ytResults, setYtResults] = useState<YTResult[]>([]);
+  const [saavnResults, setSaavnResults] = useState<SaavnResult[]>([]);
   const [searching, setSearching] = useState(false);
   const [searchError, setSearchError] = useState("");
-  const [ytUnavailable, setYtUnavailable] = useState(false);
-  const [ytImgFail, setYtImgFail] = useState<Set<string>>(new Set());
-  const [officialOnly, setOfficialOnly] = useState(true);
+  const [saavnUnavailable, setSaavnUnavailable] = useState(false);
+  const [saavnImgFail, setSaavnImgFail] = useState<Set<string>>(new Set());
   const [spConnected, setSpConnected] = useState(false);
   const [canonical, setCanonical] = useState<SpCanonical | null>(null);
   const [dlProg, setDlProg] = useState<Record<string, number>>({});
@@ -94,17 +91,17 @@ export default function SearchPage() {
     let cancelled = false;
     if (!debounced) {
       setOnline([]);
-      setYtResults([]);
+      setSaavnResults([]);
       setSearching(false);
       setSearchError("");
-      setYtUnavailable(false);
+      setSaavnUnavailable(false);
       setCanonical(null);
       return;
     }
     setSearching(true);
     setSearchError("");
     setPreviewError("");
-    setYtUnavailable(false);
+    setSaavnUnavailable(false);
     const creds = loadSpCreds();
     setSpConnected(!!creds);
     if (creds) {
@@ -118,15 +115,15 @@ export default function SearchPage() {
     } else {
       setCanonical(null);
     }
-    Promise.allSettled([searchYouTube(debounced, 15, officialOnly), searchAudius(debounced, 15)]).then(
-      ([yt, au]) => {
+    Promise.allSettled([searchSaavn(debounced, 15), searchAudius(debounced, 15)]).then(
+      ([sv, au]) => {
         if (cancelled) return;
-        if (yt.status === "fulfilled") {
-          setYtResults(yt.value);
-          setYtUnavailable(false);
+        if (sv.status === "fulfilled") {
+          setSaavnResults(sv.value);
+          setSaavnUnavailable(false);
         } else {
-          setYtResults([]);
-          setYtUnavailable(true);
+          setSaavnResults([]);
+          setSaavnUnavailable(true);
         }
         if (au.status === "fulfilled") {
           setOnline(au.value);
@@ -141,30 +138,30 @@ export default function SearchPage() {
     return () => {
       cancelled = true;
     };
-  }, [debounced, officialOnly]);
+  }, [debounced]);
 
-  function scoreYt(r: YTResult, c: SpCanonical): number {
+  function scoreMatch(r: { title: string; artist: string; durationSec: number }, c: SpCanonical): number {
     let score = 0;
-    const ytTitle = r.title.toLowerCase();
+    const resTitle = r.title.toLowerCase();
     const words = c.title.toLowerCase().split(/\s+/).filter((w) => w.length >= 3);
-    if (words.some((w) => ytTitle.includes(w))) score += 50;
+    if (words.some((w) => resTitle.includes(w))) score += 50;
     if (Math.abs((r.durationSec || 0) - (c.durationSec || 0)) <= 3) score += 30;
-    const ytArtist = (r.artist || "").toLowerCase();
+    const resArtist = (r.artist || "").toLowerCase();
     const cArtist = (c.artist || "").toLowerCase();
-    if (ytArtist && cArtist && (ytArtist.includes(cArtist) || cArtist.includes(ytArtist))) {
+    if (resArtist && cArtist && (resArtist.includes(cArtist) || cArtist.includes(resArtist))) {
       score += 20;
-    } else if (ytArtist && cArtist) {
+    } else if (resArtist && cArtist) {
       const aWords = cArtist.split(/[\s,&]+/).filter((w) => w.length >= 3);
-      if (aWords.some((w) => ytArtist.includes(w))) score += 20;
+      if (aWords.some((w) => resArtist.includes(w))) score += 20;
     }
     return score;
   }
 
-  const rankedYtResults =
+  const rankedSaavnResults =
     canonical && spConnected
-      ? [...ytResults].sort((a, b) => scoreYt(b, canonical) - scoreYt(a, canonical))
-      : ytResults;
-  const showMatchBadge = !!(canonical && spConnected && rankedYtResults.length > 0);
+      ? [...saavnResults].sort((a, b) => scoreMatch(b, canonical) - scoreMatch(a, canonical))
+      : saavnResults;
+  const showMatchBadge = !!(canonical && spConnected && rankedSaavnResults.length > 0);
 
   const handleFiles = async (files: FileList | null) => {
     if (!files || files.length === 0) return;
@@ -214,11 +211,11 @@ export default function SearchPage() {
     });
   };
 
-  const handleSaveYouTube = async (r: YTResult) => {
-    const key = `yt-${r.videoId}`;
+  const handleSaveSaavn = async (r: SaavnResult) => {
+    const key = `saavn-${r.id}`;
     setDlProg((prev) => ({ ...prev, [key]: 0 }));
     try {
-      await saveYouTubeTrack(r, loadSettings().quality, (p) =>
+      await saveSaavnTrack(r, loadSettings().quality, (p) =>
         setDlProg((prev) => ({ ...prev, [key]: p }))
       );
       await refresh();
@@ -230,21 +227,14 @@ export default function SearchPage() {
     });
   };
 
-  const handlePreviewYouTube = async (r: YTResult) => {
-    const key = r.videoId;
+  const handlePreviewSaavn = async (r: SaavnResult) => {
+    const key = r.id;
     if (previewingId) return;
     setPreviewingId(key);
     setPreviewError("");
     try {
-      try {
-        const { url } = await ytPreviewUrl(r.videoId);
-        await preview(ytMeta(r), url);
-      } catch {
-        // Transient throttle on the stream lookup — one spaced retry.
-        await new Promise((res) => setTimeout(res, 2500));
-        const { url } = await ytPreviewUrl(r.videoId);
-        await preview(ytMeta(r), url);
-      }
+      const url = streamUrl(r, loadSettings().quality);
+      await preview(saavnMeta(r), url, saavnQueue);
     } catch {
       // Keep the results list intact; show an inline note instead.
       setPreviewError("Couldn't load that preview — try again in a bit.");
@@ -257,6 +247,10 @@ export default function SearchPage() {
   const audiusQueue = online.map((r) => ({
     meta: audiusMeta(r),
     url: audiusStreamUrl(r.sourceId),
+  }));
+  const saavnQueue = saavnResults.map((r) => ({
+    meta: saavnMeta(r),
+    url: streamUrl(r, loadSettings().quality),
   }));
 
   return (
@@ -371,25 +365,14 @@ export default function SearchPage() {
               <>
                 <div className="flex items-center justify-between px-1">
                   <div className="flex items-center gap-2">
-                    <span className="font-display font-bold text-[18px]">Top hits</span>
-                    {!ytUnavailable && (
+                    <span className="font-display font-bold text-[18px]">Originals</span>
+                    {!saavnUnavailable && (
                       <span className="font-display font-bold text-[12px] t-tertiary-ct px-2.5 py-0.5 rounded-full clay-thumb">
-                        {rankedYtResults.length}
+                        {rankedSaavnResults.length}
                       </span>
                     )}
                   </div>
                   <span className="text-[11px] font-bold t-muted">Tap to preview</span>
-                </div>
-
-                <div className="flex items-center gap-2 px-1">
-                  <button
-                    type="button"
-                    onClick={() => setOfficialOnly((v) => !v)}
-                    aria-pressed={officialOnly}
-                    className={`h-9 px-4 rounded-full font-display font-bold text-[12px] clay-thumb ${officialOnly ? "t-primary-ct" : "t-surface t-muted"}`}
-                  >
-                    Official only
-                  </button>
                 </div>
 
                 {previewError && (
@@ -421,11 +404,11 @@ export default function SearchPage() {
                   </div>
                 )}
 
-                {ytUnavailable ? (
+                {saavnUnavailable ? (
                   <p className="text-[12px] font-bold t-muted px-1">
-                    YouTube unavailable right now.
+                    Originals unavailable right now.
                   </p>
-                ) : rankedYtResults.length === 0 ? (
+                ) : rankedSaavnResults.length === 0 ? (
                   online.length === 0 && !searchError ? (
                     <div className="w-full t-card p-6 rounded-2xl clay-card flex flex-col items-center text-center">
                       <p className="font-display font-bold text-[18px]">No matches</p>
@@ -433,22 +416,22 @@ export default function SearchPage() {
                     </div>
                   ) : (
                     <p className="text-[12px] font-bold t-muted px-1">
-                      No Top hits for this query.
+                      No Originals for this query.
                     </p>
                   )
                 ) : (
                   <div className="flex flex-col gap-3">
-                    {rankedYtResults.map((r, idx) => {
-                      const savedKey = `yt-${r.videoId}`;
+                    {rankedSaavnResults.map((r, idx) => {
+                      const savedKey = `saavn-${r.id}`;
                       const isSaved = savedIds.has(savedKey);
                       const prog = dlProg[savedKey];
                       const isDownloading = prog !== undefined;
-                      const imgFailed = ytImgFail.has(r.videoId);
-                      const isPreviewing = previewingId === r.videoId;
+                      const imgFailed = saavnImgFail.has(r.id);
+                      const isPreviewing = previewingId === r.id;
                       return (
                         <div
-                          key={r.videoId}
-                          onClick={() => handlePreviewYouTube(r)}
+                          key={r.id}
+                          onClick={() => handlePreviewSaavn(r)}
                           className="w-full t-card p-3 rounded-2xl clay-card flex items-center justify-between gap-2 text-left cursor-pointer"
                         >
                           <div className="flex items-center gap-3 min-w-0 flex-1">
@@ -460,7 +443,7 @@ export default function SearchPage() {
                                   width={56}
                                   height={56}
                                   onError={() =>
-                                    setYtImgFail((prev) => new Set(prev).add(r.videoId))
+                                    setSaavnImgFail((prev) => new Set(prev).add(r.id))
                                   }
                                   className="w-14 h-14 rounded-2xl object-cover clay-thumb shrink-0"
                                 />
@@ -521,7 +504,7 @@ export default function SearchPage() {
                               aria-label={`Download ${r.title}`}
                               onClick={(e) => {
                                 e.stopPropagation();
-                                handleSaveYouTube(r);
+                                handleSaveSaavn(r);
                               }}
                               className="w-11 h-11 rounded-full t-tertiary-ct clay-thumb flex items-center justify-center shrink-0"
                             >
@@ -549,7 +532,7 @@ export default function SearchPage() {
                     <p className="text-[13px] font-bold t-tertiary-text">{searchError}</p>
                   </div>
                 ) : online.length === 0 ? (
-                  rankedYtResults.length === 0 && !ytUnavailable ? null : (
+                  rankedSaavnResults.length === 0 && !saavnUnavailable ? null : (
                     <p className="text-[12px] font-bold t-muted px-1">
                       No Indie matches for this query.
                     </p>

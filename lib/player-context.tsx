@@ -12,7 +12,9 @@ export interface NowPlaying {
   icon: string;
   bg: string;
   artwork?: string | null;
-  source?: "stash" | "audius" | "youtube";
+  album?: string;
+  year?: string;
+  source?: "stash" | "audius" | "saavn";
   sourceId?: string;
   streamUrl?: string | null;
 }
@@ -73,7 +75,7 @@ function savedToNowPlaying(t: SavedTrack): NowPlaying {
     icon: t.icon,
     bg: t.bg,
     artwork: t.artwork ?? null,
-    source: t.source === "audius" || t.source === "youtube" ? t.source : "stash",
+    source: t.source === "audius" || t.source === "saavn" ? t.source : "stash",
     sourceId: t.sourceId ?? undefined,
     streamUrl: null,
   };
@@ -163,7 +165,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
       icon: saved.icon,
       bg: saved.bg,
       artwork: saved.artwork ?? null,
-      source: saved.source === "audius" || saved.source === "youtube" ? saved.source : "stash",
+      source: saved.source === "audius" || saved.source === "saavn" ? saved.source : "stash",
       sourceId: saved.sourceId ?? undefined,
       streamUrl: null,
     });
@@ -431,16 +433,19 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
         );
         return rec.id;
       }
-      if (src === "youtube") {
-        if (!cur.sourceId) throw new Error("missing youtube videoId");
-        const { saveYouTubeTrack } = await import("./downloads");
-        const rec = await saveYouTubeTrack(
+      if (src === "saavn") {
+        if (!cur.sourceId) throw new Error("missing saavn sourceId");
+        const { saveSaavnTrack } = await import("./downloads");
+        const rec = await saveSaavnTrack(
           {
-            videoId: cur.sourceId,
+            id: cur.sourceId,
             title: cur.title,
             artist: cur.artist,
+            album: cur.album ?? "",
             durationSec: cur.durationSec,
+            year: cur.year ?? "",
             artwork: cur.artwork ?? null,
+            url: cur.streamUrl ?? "",
           },
           q,
           onProgress
