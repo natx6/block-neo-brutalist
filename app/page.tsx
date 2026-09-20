@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { BottomNav, MiniPlayer, Icon } from "./components/Nav";
 import { recentTracks, type SavedTrack } from "../lib/db";
-import { loadSettings, saveFileTracks, storeSettings } from "../lib/downloads";
+import { loadSettings, saveFileTracks } from "../lib/downloads";
 import { usePlayer } from "../lib/player-context";
 
 const MOODS = [
@@ -15,7 +15,6 @@ const MOODS = [
 ];
 
 export default function Home() {
-  const [sleepOn, setSleepOn] = useState(true);
   const [recent, setRecent] = useState<SavedTrack[]>([]);
   const [importStatus, setImportStatus] = useState("");
   const [artFail, setArtFail] = useState<Set<string>>(new Set());
@@ -32,23 +31,11 @@ export default function Home() {
   }, []);
 
   useEffect(() => {
-    try {
-      setSleepOn(loadSettings().sleepOn);
-    } catch {}
     refresh();
     const onFocus = () => refresh();
     window.addEventListener("focus", onFocus);
     return () => window.removeEventListener("focus", onFocus);
   }, [refresh]);
-
-  const toggleSleep = () => {
-    const next = !sleepOn;
-    setSleepOn(next);
-    try {
-      const s = loadSettings();
-      storeSettings({ ...s, sleepOn: next });
-    } catch {}
-  };
 
   const handleFiles = async (files: FileList | null) => {
     if (!files || files.length === 0) return;
@@ -65,7 +52,7 @@ export default function Home() {
   };
 
   return (
-    <div className="t-bg min-h-dvh max-w-[430px] mx-auto flex flex-col relative">
+    <div className="t-bg h-dvh max-w-[430px] mx-auto flex flex-col relative overflow-hidden">
       <header className="fixed top-0 inset-x-0 z-50 pt-safe t-bg">
         <div className="max-w-[430px] mx-auto h-16 px-5 flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -82,7 +69,7 @@ export default function Home() {
         </div>
       </header>
 
-      <main className="flex-1 pt-16 pb-[180px]">
+      <main className="flex-1 min-h-0 pt-16 pb-[180px] overflow-y-auto overscroll-contain">
         <div className="px-5 pt-3">
           <p className="font-display font-bold text-[18px]">{greeting}</p>
         </div>
@@ -202,27 +189,6 @@ export default function Home() {
           </div>
         </div>
 
-        <div className="px-5 mt-4 mb-8">
-          <div className="p-4 rounded-2xl t-card clay-card flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full t-secondary-ct flex items-center justify-center">
-                <Icon name="bedtime" fill />
-              </div>
-              <div>
-                <p className="font-display font-bold text-[14px]">Sleep Timer</p>
-                <p className="text-[12px] t-muted">Auto fade in 30 mins</p>
-              </div>
-            </div>
-            <button
-              onClick={toggleSleep}
-              className={`w-12 h-7 rounded-full p-0.5 relative min-w-[48px] ${sleepOn ? "t-primary-ct" : "t-variant"}`}
-              aria-checked={sleepOn}
-              role="switch"
-            >
-              <div className={`w-6 h-6 rounded-full bg-white clay-thumb transition-transform ${sleepOn ? "translate-x-5" : "translate-x-0"}`} />
-            </button>
-          </div>
-        </div>
       </main>
 
       <MiniPlayer />

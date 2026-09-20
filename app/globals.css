@@ -268,11 +268,13 @@
 }
 
 html, body {
+  height: 100%;
+  overflow: hidden;
+  overscroll-behavior: none;
   background: var(--bg);
   color: var(--ink);
   font-family: "Nunito Sans", system-ui, sans-serif;
   -webkit-tap-highlight-color: transparent;
-  overscroll-behavior-y: none;
 }
 
 .font-display { font-family: "Quicksand", sans-serif; }

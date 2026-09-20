@@ -20,7 +20,7 @@ export const metadata: Metadata = {
   title: "Puff — Cozy Music",
   description: "Puff claymorphic offline music player. Face 1: Home.",
   manifest: "/manifest.json",
-  appleWebApp: { capable: true, statusBarStyle: "default", title: "Puff" },
+  appleWebApp: { capable: true, statusBarStyle: "black-translucent", title: "Puff" },
 };
 
 export const viewport: Viewport = {

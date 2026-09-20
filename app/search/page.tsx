@@ -80,6 +80,7 @@ export default function SearchPage() {
   const [previewingId, setPreviewingId] = useState<string | null>(null);
   const [previewError, setPreviewError] = useState("");
   const fileRef = useRef<HTMLInputElement>(null);
+  const mainRef = useRef<HTMLElement>(null);
 
   const refresh = useCallback(async () => {
     try {
@@ -94,10 +95,10 @@ export default function SearchPage() {
     // Restore scroll + cached results from last visit.
     if (searchCache.scrollY > 0) {
       const y = searchCache.scrollY;
-      requestAnimationFrame(() => window.scrollTo(0, y));
+      requestAnimationFrame(() => mainRef.current?.scrollTo(0, y));
     }
     return () => {
-      searchCache.scrollY = window.scrollY;
+      searchCache.scrollY = mainRef.current?.scrollTop ?? 0;
     };
   }, [refresh]);
 
@@ -293,9 +294,9 @@ export default function SearchPage() {
   }));
 
   return (
-    <div className="t-bg min-h-dvh max-w-[430px] mx-auto flex flex-col relative">
+    <div className="t-bg h-dvh max-w-[430px] mx-auto flex flex-col relative overflow-hidden">
       <TopBar title="Search" />
-      <main className="flex-1 pt-16 pb-[180px] px-5 flex flex-col gap-4">
+      <main ref={mainRef} className="flex-1 min-h-0 pt-16 pb-[180px] px-5 flex flex-col gap-4 overflow-y-auto overscroll-contain">
         <div className="pt-3">
           <div className="flex items-center w-full h-14 t-card rounded-full px-4 clay-card">
             <span className="t-primary-text mr-2 flex items-center">

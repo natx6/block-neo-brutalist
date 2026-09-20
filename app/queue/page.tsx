@@ -21,7 +21,7 @@ export default function QueuePage() {
   }, [current?.id]);
 
   return (
-    <div className="bg-[#231534]/40 min-h-dvh max-w-[430px] mx-auto flex flex-col justify-end relative">
+    <div className="bg-[#231534]/40 h-dvh max-w-[430px] mx-auto flex flex-col justify-end relative overflow-hidden">
       <div className="t-bg rounded-t-[32px] clay-card p-5 pb-10 min-h-[70dvh]">
         <div className="w-12 h-1.5 rounded-full t-variant mx-auto mb-4" />
         <div className="flex items-center justify-between mb-3">

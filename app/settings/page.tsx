@@ -16,6 +16,7 @@ export default function SettingsPage() {
   const [settings, setSettings] = useState<Settings>({ quality: "Good", wifiOnly: true, offlineMode: false, sleepOn: true });
   const [notice, setNotice] = useState("");
   const [theme, setTheme] = useState("puff");
+  const [themeOpen, setThemeOpen] = useState(false);
   const [spId, setSpId] = useState("");
   const [spSecret, setSpSecret] = useState("");
   const [spConnected, setSpConnected] = useState(false);
@@ -80,45 +81,68 @@ export default function SettingsPage() {
   };
 
   return (
-    <div className="t-bg min-h-dvh max-w-[430px] mx-auto flex flex-col relative">
+    <div className="t-bg h-dvh max-w-[430px] mx-auto flex flex-col relative overflow-hidden">
       <header className="fixed top-0 inset-x-0 z-50 pt-safe t-bg">
         <div className="max-w-[430px] mx-auto h-16 px-5 flex items-center gap-2">
           <Link href="/" className="w-11 h-11 rounded-full t-container clay-card flex items-center justify-center min-w-[44px]">‹</Link>
           <h1 className="font-display font-bold text-[18px]">Settings</h1>
         </div>
       </header>
-      <main className="flex-1 pt-20 pb-10 px-5 flex flex-col gap-4">
+      <main className="flex-1 min-h-0 pt-20 pb-10 px-5 flex flex-col gap-4 overflow-y-auto overscroll-contain">
         <div className="t-card rounded-2xl p-4 clay-card">
-          <p className="font-display font-bold mb-1">Theme</p>
-          <p className="text-[12px] t-muted mb-3">Pick a look for Puff</p>
-          <div className="flex flex-col gap-2">
-            {THEMES.map((t) => {
-              const active = theme === t.id;
-              return (
-                <button
-                  key={t.id}
-                  onClick={() => handleTheme(t.id)}
-                  aria-pressed={active}
-                  className={`w-full p-3 rounded-2xl flex items-center gap-3 text-left min-h-[56px] ${active ? "t-primary-ct clay-button-active" : "t-surface clay-card"}`}
-                >
-                  <span className="flex -space-x-1.5 shrink-0">
-                    {t.swatches.map((s) => (
-                      <span
-                        key={s}
-                        className="w-6 h-6 rounded-full clay-thumb border border-white/60"
-                        style={{ background: s }}
-                      />
-                    ))}
-                  </span>
-                  <span className="flex-1 min-w-0">
-                    <span className="font-display font-bold text-[14px] block">{t.name}</span>
-                    <span className="text-[12px] t-muted block">{t.desc}</span>
-                  </span>
-                  {active && <Icon name="check" className="text-[22px] shrink-0" />}
-                </button>
-              );
-            })}
-          </div>
+          <button
+            type="button"
+            onClick={() => setThemeOpen((v) => !v)}
+            aria-expanded={themeOpen}
+            className="w-full flex items-center gap-3 text-left min-h-[56px]"
+          >
+            <span className="flex -space-x-1.5 shrink-0">
+              {(THEMES.find((t) => t.id === theme) ?? THEMES[0]).swatches.map((s) => (
+                <span
+                  key={s}
+                  className="w-6 h-6 rounded-full clay-thumb border border-white/60"
+                  style={{ background: s }}
+                />
+              ))}
+            </span>
+            <span className="flex-1 min-w-0">
+              <span className="font-display font-bold text-[14px] block">Theme</span>
+              <span className="text-[12px] t-muted block">
+                {(THEMES.find((t) => t.id === theme) ?? THEMES[0]).name} — tap to change
+              </span>
+            </span>
+            <Icon name={themeOpen ? "expand_less" : "expand_more"} className="text-[24px] shrink-0 t-muted" />
+          </button>
+          {themeOpen && (
+            <div className="flex flex-col gap-2 mt-3">
+              {THEMES.map((t) => {
+                const active = theme === t.id;
+                return (
+                  <button
+                    key={t.id}
+                    onClick={() => handleTheme(t.id)}
+                    aria-pressed={active}
+                    className={`w-full p-3 rounded-2xl flex items-center gap-3 text-left min-h-[56px] ${active ? "t-primary-ct clay-button-active" : "t-surface clay-card"}`}
+                  >
+                    <span className="flex -space-x-1.5 shrink-0">
+                      {t.swatches.map((s) => (
+                        <span
+                          key={s}
+                          className="w-6 h-6 rounded-full clay-thumb border border-white/60"
+                          style={{ background: s }}
+                        />
+                      ))}
+                    </span>
+                    <span className="flex-1 min-w-0">
+                      <span className="font-display font-bold text-[14px] block">{t.name}</span>
+                      <span className="text-[12px] t-muted block">{t.desc}</span>
+                    </span>
+                    {active && <Icon name="check" className="text-[22px] shrink-0" />}
+                  </button>
+                );
+              })}
+            </div>
+          )}
         </div>
 
         <div className="t-card rounded-2xl p-4 clay-card">

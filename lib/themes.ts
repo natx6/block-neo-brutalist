@@ -33,6 +33,17 @@ export function applyTheme(id: string): void {
   const valid = THEMES.some((t) => t.id === id) ? id : "puff";
   if (typeof document !== "undefined") {
     document.documentElement.dataset.theme = valid;
+    // Keep the phone status bar / browser chrome on the theme color.
+    try {
+      const bg = THEMES.find((t) => t.id === valid)?.swatches[0] || "#fff7ff";
+      let meta = document.querySelector('meta[name="theme-color"]');
+      if (!meta) {
+        meta = document.createElement("meta");
+        meta.setAttribute("name", "theme-color");
+        document.head.appendChild(meta);
+      }
+      meta.setAttribute("content", bg);
+    } catch {}
   }
   try {
     localStorage.setItem(KEY, valid);
