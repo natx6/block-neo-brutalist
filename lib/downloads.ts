@@ -1,6 +1,5 @@
 import { db } from "./db";
 import { ART_FALLBACKS, cleanFileTitle } from "./catalog";
-import { audiusStreamUrl, type OnlineResult } from "./audius";
 import { streamUrl, type SaavnResult } from "./saavn";
 
 import { parseBlob } from "music-metadata-browser";
@@ -142,35 +141,6 @@ export async function saveUrlTrack(url: string, quality = "Good", onProgress?: (
     durationSec,
     icon: art.icon,
     bg: art.bg,
-    blob,
-    mime: blob.type || "audio/mpeg",
-    size: blob.size,
-    quality,
-    addedAt: Date.now(),
-    playCount: 0,
-  };
-  await db.tracks.put(rec);
-  return rec;
-}
-
-export async function saveAudiusTrack(r: OnlineResult, quality = "Good", onProgress?: (pct: number) => void) {
-  const id = `audius-${r.sourceId}`;
-  const existing = await db.tracks.get(id);
-  if (existing) return existing;
-  const blob = await downloadWithProgress(audiusStreamUrl(r.sourceId), (p) => onProgress?.(p));
-  if (blob.size < 1024) throw new Error("Download came back empty");
-  const probed = await probeDuration(blob);
-  const art = fallbackArt(Date.now() % 1000);
-  const rec = {
-    id,
-    title: r.title,
-    artist: r.artist,
-    durationSec: probed || r.durationSec,
-    icon: art.icon,
-    bg: art.bg,
-    artwork: r.artwork,
-    source: "audius",
-    sourceId: r.sourceId,
     blob,
     mime: blob.type || "audio/mpeg",
     size: blob.size,

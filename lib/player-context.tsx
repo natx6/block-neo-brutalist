@@ -14,7 +14,7 @@ export interface NowPlaying {
   artwork?: string | null;
   album?: string;
   year?: string;
-  source?: "stash" | "audius" | "saavn";
+  source?: "stash" | "saavn";
   sourceId?: string;
   streamUrl?: string | null;
 }
@@ -75,7 +75,7 @@ function savedToNowPlaying(t: SavedTrack): NowPlaying {
     icon: t.icon,
     bg: t.bg,
     artwork: t.artwork ?? null,
-    source: t.source === "audius" || t.source === "saavn" ? t.source : "stash",
+    source: t.source === "saavn" ? t.source : "stash",
     sourceId: t.sourceId ?? undefined,
     streamUrl: null,
   };
@@ -165,7 +165,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
       icon: saved.icon,
       bg: saved.bg,
       artwork: saved.artwork ?? null,
-      source: saved.source === "audius" || saved.source === "saavn" ? saved.source : "stash",
+      source: saved.source === "saavn" ? saved.source : "stash",
       sourceId: saved.sourceId ?? undefined,
       streamUrl: null,
     });
@@ -417,22 +417,6 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
           return "Good";
         }
       })();
-      if (src === "audius") {
-        if (!cur.sourceId) throw new Error("missing audius sourceId");
-        const { saveAudiusTrack } = await import("./downloads");
-        const rec = await saveAudiusTrack(
-          {
-            sourceId: cur.sourceId,
-            title: cur.title,
-            artist: cur.artist,
-            durationSec: cur.durationSec,
-            artwork: cur.artwork ?? null,
-          },
-          q,
-          onProgress
-        );
-        return rec.id;
-      }
       if (src === "saavn") {
         if (!cur.sourceId) throw new Error("missing saavn sourceId");
         const { saveSaavnTrack } = await import("./downloads");
@@ -452,7 +436,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
         );
         return rec.id;
       }
-      throw new Error(`unknown source: ${src}`);
+      throw new Error("cannot-save");
     },
     []
   );

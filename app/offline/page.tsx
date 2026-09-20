@@ -1,10 +1,11 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { BottomNav, Icon, MiniPlayer, TopBar } from "../components/Nav";
 import { fmtMB } from "../../lib/catalog";
 import { listTracks, removeTrack, stashSize, type SavedTrack } from "../../lib/db";
+import { loadSettings, saveFileTracks, saveUrlTrack } from "../../lib/downloads";
 import { usePlayer } from "../../lib/player-context";
 
 const FOUR_GB = 4 * 1024 * 1024 * 1024;
@@ -22,6 +23,12 @@ export default function OfflinePage() {
   const [quota, setQuota] = useState(0);
   const [usage, setUsage] = useState(0);
   const [active] = useState<ActiveDownload[]>([]);
+  const [importStatus, setImportStatus] = useState("");
+  const [url, setUrl] = useState("");
+  const [downloading, setDownloading] = useState(false);
+  const [dlPct, setDlPct] = useState(0);
+  const [urlError, setUrlError] = useState("");
+  const fileRef = useRef<HTMLInputElement>(null);
 
   const refresh = useCallback(async () => {
     try {
@@ -51,6 +58,38 @@ export default function OfflinePage() {
     await refresh();
   };
 
+  const handleFiles = async (files: FileList | null) => {
+    if (!files || files.length === 0) return;
+    const count = files.length;
+    setImportStatus("Importing...");
+    try {
+      await saveFileTracks(files, loadSettings().quality);
+      setImportStatus(`Saved ${count} song(s)`);
+      await refresh();
+    } catch (err) {
+      setImportStatus(err instanceof Error ? err.message : "Import failed");
+    }
+    if (fileRef.current) fileRef.current.value = "";
+  };
+
+  const handleUrl = async () => {
+    const u = url.trim();
+    if (!u || downloading) return;
+    setUrlError("");
+    setDownloading(true);
+    setDlPct(0);
+    try {
+      await saveUrlTrack(u, loadSettings().quality, (p) => setDlPct(p));
+      setUrl("");
+      await refresh();
+    } catch {
+      setUrlError("That link did not return audio.");
+    } finally {
+      setDownloading(false);
+      setDlPct(0);
+    }
+  };
+
   return (
     <div className="t-bg h-dvh max-w-[430px] mx-auto flex flex-col relative overflow-hidden">
       <TopBar title="Offline" />
@@ -71,6 +110,61 @@ export default function OfflinePage() {
             <span>{fmtMB(size)} saved • {tracks.length} songs</span>
             <button onClick={refresh} className="px-3 py-1.5 rounded-full t-card clay-card font-display font-bold text-[12px]">Refresh</button>
           </div>
+        </div>
+
+        <div className="w-full t-card p-4 rounded-2xl clay-card flex flex-col gap-3">
+          <p className="font-display font-bold text-[16px]">Add music</p>
+          <button
+            type="button"
+            onClick={() => fileRef.current?.click()}
+            className="h-12 rounded-full t-primary font-display font-bold text-[14px] clay-button-active flex items-center justify-center gap-1.5 min-h-[48px]"
+          >
+            <Icon name="upload" className="text-[20px]" />
+            Import from device
+          </button>
+          <input
+            ref={fileRef}
+            type="file"
+            accept="audio/*,.mp3,.m4a,.wav,.ogg,.flac,.aac,.opus,.weba"
+            multiple
+            tabIndex={-1}
+            aria-hidden
+            className="absolute w-px h-px opacity-0 overflow-hidden pointer-events-none"
+            onChange={(e) => handleFiles(e.target.files)}
+          />
+          {importStatus && (
+            <p className="text-[12px] font-bold t-muted">{importStatus}</p>
+          )}
+          <div className="flex gap-2">
+            <input
+              value={url}
+              onChange={(e) => setUrl(e.target.value)}
+              placeholder="Paste an audio link..."
+              aria-label="Audio link"
+              className="flex-1 h-12 rounded-full t-surface px-4 text-[14px] font-medium focus:outline-none min-w-0 shadow-[inset_2px_2px_5px_rgba(74,59,92,0.12)]"
+            />
+            <button
+              onClick={handleUrl}
+              disabled={downloading || !url.trim()}
+              className="h-12 px-5 rounded-full t-secondary-ct font-display font-bold text-[14px] clay-thumb min-h-[48px] shrink-0 disabled:opacity-50 flex items-center gap-1.5"
+            >
+              {downloading ? (
+                <span className="flex items-center gap-1.5">
+                  <span className="w-5 h-5 rounded-full border-2 border-[var(--secondary)] border-t-transparent animate-spin" />
+                  {dlPct}%
+                </span>
+              ) : (
+                <span className="flex items-center gap-1.5">
+                  <Icon name="download" className="text-[18px]" />
+                  Download
+                </span>
+              )}
+            </button>
+          </div>
+          {urlError && <p className="text-[12px] font-bold t-tertiary-text">{urlError}</p>}
+          <p className="text-[11px] font-medium t-muted">
+            Tip: use DRM-free audio from the Files app — Apple Music streams cannot be imported.
+          </p>
         </div>
 
         <div className="w-full t-container rounded-2xl p-4 clay-card flex items-center justify-between">

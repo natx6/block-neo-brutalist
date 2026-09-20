@@ -5,8 +5,8 @@ import Link from "next/link";
 import { BottomNav, MiniPlayer, Icon } from "./components/Nav";
 import AppIcon from "./components/AppIcon";
 import { listTracks, recentTracks, type SavedTrack } from "../lib/db";
-import { loadSettings, saveAudiusTrack, saveFileTracks, saveSaavnTrack } from "../lib/downloads";
-import { audiusStreamUrl, trendingAudius, type OnlineResult } from "../lib/audius";
+import { loadSettings, saveSaavnTrack } from "../lib/downloads";
+import { fetchCharts, GENRES, type ChartSong } from "../lib/charts";
 import { searchSaavn, streamUrl, type SaavnResult } from "../lib/saavn";
 import { usePlayer } from "../lib/player-context";
 
@@ -17,25 +17,22 @@ const MOODS = [
   { title: "Dreamy", sub: "Bedtime melodies", bg: "bg-[#E2D4FF]", dot: "bg-[#CFBCFA]", text: "text-[#352561]", subText: "text-[#4A387E]", icon: "bedtime", href: "/search?q=sleep%20sounds" },
 ];
 
-const GENRES = [
-  { label: "All", value: "" },
-  { label: "Electronic", value: "Electronic" },
-  { label: "Hip-Hop", value: "Hip-Hop/Rap" },
-  { label: "Lo-Fi", value: "Lo-Fi" },
-  { label: "R&B/Soul", value: "R&B/Soul" },
-];
+function chartKey(c: ChartSong) {
+  return `${c.title}|${c.artist}`;
+}
 
 export default function Home() {
   const [recent, setRecent] = useState<SavedTrack[]>([]);
-  const [importStatus, setImportStatus] = useState("");
   const [artFail, setArtFail] = useState<Set<string>>(new Set());
-  const fileRef = useRef<HTMLInputElement>(null);
   const { current, playing, play, preview, toggle } = usePlayer();
 
   const [genre, setGenre] = useState("");
-  const [trending, setTrending] = useState<OnlineResult[]>([]);
-  const [trendingLoading, setTrendingLoading] = useState(false);
-  const [trendArtFail, setTrendArtFail] = useState<Set<string>>(new Set());
+  const [charts, setCharts] = useState<ChartSong[]>([]);
+  const [chartsLoading, setChartsLoading] = useState(false);
+  const [chartArtFail, setChartArtFail] = useState<Set<string>>(new Set());
+  const [matchingId, setMatchingId] = useState<string | null>(null);
+  const [unplayable, setUnplayable] = useState<Set<string>>(new Set());
+  const matchCache = useRef(new Map<string, SaavnResult>());
   const [savedIds, setSavedIds] = useState<Set<string>>(new Set());
   const [dlProg, setDlProg] = useState<Record<string, number>>({});
   const [moreArtist, setMoreArtist] = useState("");
@@ -52,14 +49,14 @@ export default function Home() {
     } catch {}
   }, []);
 
-  const fetchTrending = useCallback(async (g: string) => {
-    setTrendingLoading(true);
+  const fetchChartSongs = useCallback(async (g: string) => {
+    setChartsLoading(true);
     try {
-      setTrending(await trendingAudius(g, 10));
+      setCharts(await fetchCharts(g, 15));
     } catch {
-      setTrending([]);
+      setCharts([]);
     } finally {
-      setTrendingLoading(false);
+      setChartsLoading(false);
     }
   }, []);
 
@@ -105,33 +102,48 @@ export default function Home() {
 
   useEffect(() => {
     refresh();
-    fetchTrending(genre);
+    fetchChartSongs(genre);
     fetchMore();
     const onFocus = () => {
       refresh();
-      fetchTrending(genre);
+      fetchChartSongs(genre);
       fetchMore();
     };
     window.addEventListener("focus", onFocus);
     return () => window.removeEventListener("focus", onFocus);
-  }, [refresh, fetchTrending, fetchMore, genre]);
+  }, [refresh, fetchChartSongs, fetchMore, genre]);
 
-  const handleFiles = async (files: FileList | null) => {
-    if (!files || files.length === 0) return;
-    const count = files.length;
-    setImportStatus("Importing...");
+  const matchChart = useCallback(async (c: ChartSong): Promise<SaavnResult | null> => {
+    const key = chartKey(c);
+    const cached = matchCache.current.get(key);
+    if (cached) return cached;
+    setMatchingId(key);
     try {
-      await saveFileTracks(files, loadSettings().quality);
-      setImportStatus(`Saved ${count} song(s)`);
-      await refresh();
-    } catch (err) {
-      setImportStatus(err instanceof Error ? err.message : "Import failed");
+      const res = await searchSaavn(`${c.title} ${c.artist}`, 5);
+      const m = res[0] ?? null;
+      if (m) {
+        matchCache.current.set(key, m);
+        return m;
+      }
+      setUnplayable((prev) => new Set(prev).add(key));
+      return null;
+    } catch {
+      setUnplayable((prev) => new Set(prev).add(key));
+      return null;
+    } finally {
+      setMatchingId(null);
     }
-    if (fileRef.current) fileRef.current.value = "";
-  };
+  }, []);
 
-  const handlePreviewAudius = async (r: OnlineResult) => {
-    const id = `audius-${r.sourceId}`;
+  const handlePreviewChart = async (c: ChartSong) => {
+    const key = chartKey(c);
+    if (matchingId) return;
+    let m = matchCache.current.get(key);
+    if (!m) {
+      m = (await matchChart(c)) ?? undefined;
+      if (!m) return;
+    }
+    const id = `saavn-${m.id}`;
     if (current?.id === id) {
       await toggle();
       return;
@@ -140,16 +152,17 @@ export default function Home() {
       await preview(
         {
           id,
-          title: r.title,
-          artist: r.artist,
-          durationSec: r.durationSec,
+          title: m.title,
+          artist: m.artist,
+          durationSec: m.durationSec,
           icon: "music_note",
-          bg: "#E9DCFF",
-          artwork: r.artwork,
-          source: "audius",
-          sourceId: r.sourceId,
+          bg: "#FFE0D6",
+          artwork: m.artwork,
+          album: m.album,
+          source: "saavn",
+          sourceId: m.id,
         },
-        audiusStreamUrl(r.sourceId)
+        streamUrl(m, loadSettings().quality)
       );
     } catch {}
   };
@@ -180,25 +193,6 @@ export default function Home() {
     } catch {}
   };
 
-  const handleSaveAudius = async (r: OnlineResult) => {
-    const key = `audius-${r.sourceId}`;
-    if (savedIds.has(key) || dlProg[key] !== undefined) return;
-    setDlProg((prev) => ({ ...prev, [key]: 0 }));
-    try {
-      await saveAudiusTrack(r, loadSettings().quality, (p) =>
-        setDlProg((prev) => ({ ...prev, [key]: p }))
-      );
-      try {
-        setSavedIds(new Set((await listTracks()).map((t) => t.id)));
-      } catch {}
-    } catch {}
-    setDlProg((prev) => {
-      const next = { ...prev };
-      delete next[key];
-      return next;
-    });
-  };
-
   const handleSaveSaavn = async (r: SaavnResult) => {
     const key = `saavn-${r.id}`;
     if (savedIds.has(key) || dlProg[key] !== undefined) return;
@@ -216,6 +210,17 @@ export default function Home() {
       delete next[key];
       return next;
     });
+  };
+
+  const handleSaveChart = async (c: ChartSong) => {
+    const key = chartKey(c);
+    let m = matchCache.current.get(key);
+    if (!m) {
+      if (matchingId) return;
+      m = (await matchChart(c)) ?? undefined;
+      if (!m) return;
+    }
+    await handleSaveSaavn(m);
   };
 
   return (
@@ -245,11 +250,11 @@ export default function Home() {
           </div>
           <div className="flex gap-2 overflow-x-auto px-5 pb-3 no-scrollbar">
             {GENRES.map((g) => {
-              const active = genre === g.value;
+              const active = genre === g.id;
               return (
                 <button
                   key={g.label}
-                  onClick={() => setGenre(g.value)}
+                  onClick={() => setGenre(g.id)}
                   className={`h-9 px-4 rounded-full font-display font-bold text-[13px] shrink-0 min-h-[36px] ${
                     active ? "t-primary clay-button-active" : "t-card clay-card"
                   }`}
@@ -259,37 +264,52 @@ export default function Home() {
               );
             })}
           </div>
-          {trendingLoading && trending.length === 0 ? (
-            <p className="text-[13px] font-bold t-muted px-5">Catching fresh tracks...</p>
-          ) : trending.length === 0 ? (
+          {chartsLoading && charts.length === 0 ? (
+            <p className="text-[13px] font-bold t-muted px-5">Catching today&apos;s hits...</p>
+          ) : charts.length === 0 ? (
             <p className="text-[13px] font-bold t-muted px-5">Nothing trending right now.</p>
           ) : (
             <div className="flex gap-4 overflow-x-auto px-5 pb-3 pt-1 no-scrollbar">
-              {trending.map((r) => {
-                const id = `audius-${r.sourceId}`;
-                const isCurrent = current?.id === id && playing;
-                const showArt = !!r.artwork && !trendArtFail.has(r.sourceId);
-                const isSaved = savedIds.has(id);
-                const prog = dlProg[id];
+              {charts.map((c) => {
+                const key = chartKey(c);
+                const m = matchCache.current.get(key);
+                const savedKey = m ? `saavn-${m.id}` : null;
+                const isCurrent = !!(savedKey && current?.id === savedKey && playing);
+                const showArt = !!c.artwork && !chartArtFail.has(key);
+                const isSaved = !!(savedKey && savedIds.has(savedKey));
+                const prog = savedKey ? dlProg[savedKey] : undefined;
                 const isDownloading = prog !== undefined;
+                const isMatching = matchingId === key;
+                const notAvailable = unplayable.has(key);
                 return (
-                  <div key={r.sourceId} className="flex flex-col gap-2 shrink-0 w-[140px] text-left">
+                  <div key={key} className="flex flex-col gap-2 shrink-0 w-[140px] text-left">
                     <div className="relative w-[140px] h-[140px] rounded-[28px] p-2 clay-card t-card flex items-center justify-center">
-                      {showArt ? (
-                        <img
-                          src={r.artwork as string}
-                          alt=""
-                          className="w-full h-full rounded-[20px] object-cover"
-                          onError={() => setTrendArtFail((prev) => new Set(prev).add(r.sourceId))}
-                        />
-                      ) : (
-                        <div className="w-full h-full rounded-[20px] bg-white/70 flex items-center justify-center text-[#4c3f70]">
-                          <Icon name="music_note" fill className="text-[56px]" />
-                        </div>
-                      )}
                       <button
-                        onClick={() => handlePreviewAudius(r)}
-                        aria-label={isCurrent ? `Pause ${r.title}` : `Play ${r.title}`}
+                        onClick={() => handlePreviewChart(c)}
+                        aria-label={`Play ${c.title}`}
+                        className="w-full h-full rounded-[20px] overflow-hidden relative"
+                      >
+                        {showArt ? (
+                          <img
+                            src={c.artwork as string}
+                            alt=""
+                            className="w-full h-full rounded-[20px] object-cover"
+                            onError={() => setChartArtFail((prev) => new Set(prev).add(key))}
+                          />
+                        ) : (
+                          <div className="w-full h-full rounded-[20px] bg-white/70 flex items-center justify-center text-[#4c3f70]">
+                            <Icon name="music_note" fill className="text-[56px]" />
+                          </div>
+                        )}
+                        {isMatching && (
+                          <span className="absolute inset-0 rounded-[20px] bg-white/70 flex items-center justify-center">
+                            <span className="w-6 h-6 rounded-full border-2 border-[var(--primary)] border-t-transparent animate-spin" />
+                          </span>
+                        )}
+                      </button>
+                      <button
+                        onClick={() => handlePreviewChart(c)}
+                        aria-label={isCurrent ? `Pause ${c.title}` : `Play ${c.title}`}
                         className="absolute bottom-3 right-3 w-9 h-9 rounded-full t-primary clay-thumb flex items-center justify-center"
                       >
                         <Icon name={isCurrent ? "pause" : "play_arrow"} fill className="text-[20px]" />
@@ -310,7 +330,7 @@ export default function Home() {
                               strokeWidth="4"
                               fill="none"
                               strokeDasharray="106.8"
-                              strokeDashoffset={106.8 * (1 - prog / 100)}
+                              strokeDashoffset={106.8 * (1 - (prog ?? 0) / 100)}
                               strokeLinecap="round"
                             />
                           </svg>
@@ -318,25 +338,30 @@ export default function Home() {
                         </span>
                       ) : (
                         <button
-                          onClick={() => handleSaveAudius(r)}
-                          aria-label={`Download ${r.title}`}
+                          onClick={() => handleSaveChart(c)}
+                          aria-label={`Download ${c.title}`}
                           className="absolute top-3 right-3 w-8 h-8 rounded-full t-card clay-thumb flex items-center justify-center"
                         >
                           <Icon name="download" className="text-[18px]" />
                         </button>
                       )}
                     </div>
-                    <div className="px-1">
-                      <p className="font-display font-bold text-[14px] truncate">{r.title}</p>
-                      <p className="text-[12px] t-muted truncate">{r.artist}</p>
-                    </div>
+                    <button onClick={() => handlePreviewChart(c)} className="px-1 text-left">
+                      <p className="font-display font-bold text-[14px] truncate">{c.title}</p>
+                      <p className="text-[12px] t-muted truncate">
+                        {isMatching ? "Matching..." : c.artist}
+                      </p>
+                      {notAvailable && (
+                        <p className="text-[11px] font-bold t-muted">Not available to stream</p>
+                      )}
+                    </button>
                   </div>
                 );
               })}
             </div>
           )}
-          {trendingLoading && trending.length > 0 && (
-            <p className="text-[12px] font-bold t-muted px-5 pb-1">Catching fresh tracks...</p>
+          {chartsLoading && charts.length > 0 && (
+            <p className="text-[12px] font-bold t-muted px-5 pb-1">Catching today&apos;s hits...</p>
           )}
         </div>
 
@@ -346,7 +371,7 @@ export default function Home() {
               <p className="font-display font-bold text-[22px]">More like {moreArtist}</p>
             </div>
             {moreLoading && moreTracks.length === 0 ? (
-              <p className="text-[13px] font-bold t-muted px-5">Catching fresh tracks...</p>
+              <p className="text-[13px] font-bold t-muted px-5">Catching today&apos;s hits...</p>
             ) : moreTracks.length === 0 ? null : (
               <div className="flex gap-4 overflow-x-auto px-5 pb-3 pt-1 no-scrollbar">
                 {moreTracks.map((r) => {
@@ -435,7 +460,7 @@ export default function Home() {
                 </div>
                 <p className="font-display font-bold text-[18px]">Your stash is empty</p>
                 <p className="text-[13px] t-muted mt-1">Import audio from your device and it will live here.</p>
-                <Link href="/search" className="mt-3 h-11 px-6 rounded-full t-primary font-display font-bold text-[14px] clay-button-active flex items-center min-h-[44px]">
+                <Link href="/offline" className="mt-3 h-11 px-6 rounded-full t-primary font-display font-bold text-[14px] clay-button-active flex items-center min-h-[44px]">
                   Add music
                 </Link>
               </div>
@@ -473,47 +498,6 @@ export default function Home() {
               })}
             </div>
           )}
-        </div>
-
-        <div className="px-5 mt-4">
-          <div className="rounded-2xl bg-gradient-to-br from-[var(--container)] to-[var(--variant)] p-4 clay-card">
-            <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-full t-primary-ct clay-thumb flex items-center justify-center shrink-0">
-                <Icon name="library_music" fill />
-              </div>
-              <div>
-                <h3 className="font-display font-bold text-[18px]">Add music</h3>
-                <p className="text-[12px] t-muted">Import files or paste a link to grow your stash.</p>
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-2 mt-3">
-              <button
-                type="button"
-                onClick={() => fileRef.current?.click()}
-                className="h-12 rounded-full t-primary font-display font-bold text-[14px] clay-button-active flex items-center justify-center gap-1.5 min-h-[48px]"
-              >
-                <Icon name="upload" className="text-[20px]" />
-                From device
-              </button>
-              <Link href="/search" className="h-12 rounded-full t-card font-display font-bold text-[14px] clay-card flex items-center justify-center gap-1.5 min-h-[48px]">
-                <Icon name="link" className="text-[20px]" />
-                Paste a link
-              </Link>
-            </div>
-            <input
-              ref={fileRef}
-              type="file"
-              accept="audio/*,.mp3,.m4a,.wav,.ogg,.flac,.aac,.opus,.weba"
-              multiple
-              tabIndex={-1}
-              aria-hidden
-              className="absolute w-px h-px opacity-0 overflow-hidden pointer-events-none"
-              onChange={(e) => handleFiles(e.target.files)}
-            />
-            {importStatus && (
-              <p className="text-[12px] font-bold t-muted mt-2">{importStatus}</p>
-            )}
-          </div>
         </div>
 
         <div className="px-5 mt-6">
