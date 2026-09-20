@@ -66,7 +66,7 @@ const TABS = [
 export function BottomNav({ active }: { active: string }) {
   return (
     <nav className="fixed bottom-0 inset-x-0 z-50 pb-safe px-5 pointer-events-none">
-      <div className="pointer-events-auto mx-auto max-w-[390px] h-16 t-card-90 rounded-full mb-2 px-2 flex items-center justify-around clay-pill">
+      <div className="pointer-events-auto mx-auto max-w-[390px] h-16 t-card-90 rounded-full px-2 flex items-center justify-around clay-pill">
         {TABS.map((t) => (
           <Link
             key={t.id}
