@@ -20,7 +20,7 @@ export function MiniPlayer() {
     setArtFailed(false);
   }, [current?.id]);
   return (
-    <aside className="fixed inset-x-0 z-40 px-5 pointer-events-none" style={{ bottom: "4.75rem" }}>
+    <aside className="fixed inset-x-0 z-40 px-5 pointer-events-none" style={{ bottom: "4.5rem" }}>
       <div className="pointer-events-auto mx-auto max-w-[390px] h-[64px] t-card-95 rounded-full px-3 flex items-center justify-between clay-pill">
         <Link href="/player" className="flex items-center gap-3 min-w-0 flex-1" onClick={() => setArtFailed(false)}>
           {showArt ? (
@@ -65,17 +65,17 @@ const TABS = [
 
 export function BottomNav({ active }: { active: string }) {
   return (
-    <nav className="fixed bottom-0 inset-x-0 z-50 px-5 pointer-events-none" style={{ paddingBottom: 0 }}>
-      <div className="pointer-events-auto mx-auto max-w-[390px] h-16 t-card-90 rounded-full px-2 flex items-center justify-around clay-pill">
+    <nav className="fixed bottom-0 inset-x-0 z-50 pointer-events-none" style={{ paddingBottom: 0 }}>
+      <div className="pointer-events-auto h-[60px] t-card flex items-center justify-around clay-pill rounded-none px-2">
         {TABS.map((t) => (
           <Link
             key={t.id}
             href={t.href}
-            className={`flex flex-col items-center justify-center w-14 h-12 rounded-full min-w-[56px] min-h-[48px] ${
+            className={`flex flex-col items-center justify-center w-16 h-12 rounded-xl min-w-[60px] min-h-[48px] ${
               active === t.id ? "t-primary-ct clay-button-active font-bold" : "t-muted"
             }`}
           >
-            <Icon name={t.icon} fill={active === t.id} className="text-[22px]" />
+            <Icon name={t.icon} fill={active === t.id} className="text-[20px]" />
             <span className="font-display font-bold text-[10px]">{t.label}</span>
           </Link>
         ))}
