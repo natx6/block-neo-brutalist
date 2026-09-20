@@ -40,6 +40,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0..1,0&display=swap"
           rel="stylesheet"
         />
+        <link rel="icon" href="/icons/icon-puff.png" />
+        <link rel="apple-touch-icon" href="/icons/icon-puff.png" />
         <script
           dangerouslySetInnerHTML={{
             __html: `try{document.documentElement.dataset.theme=localStorage.getItem("puff-theme")||"puff"}catch{}`,

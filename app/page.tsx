@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { BottomNav, MiniPlayer, Icon } from "./components/Nav";
+import AppIcon from "./components/AppIcon";
 import { recentTracks, type SavedTrack } from "../lib/db";
 import { loadSettings, saveFileTracks } from "../lib/downloads";
 import { usePlayer } from "../lib/player-context";
@@ -56,9 +57,7 @@ export default function Home() {
       <header className="fixed top-0 inset-x-0 z-50 pt-safe t-bg">
         <div className="max-w-[430px] mx-auto h-16 px-5 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <div className="w-9 h-9 rounded-2xl t-primary-ct clay-thumb flex items-center justify-center">
-              <Icon name="cloud" fill />
-            </div>
+            <AppIcon className="w-9 h-9 rounded-2xl clay-thumb" />
             <span className="font-display font-bold text-[22px]">Puff</span>
           </div>
           <div className="flex items-center gap-2">
