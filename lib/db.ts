@@ -18,6 +18,10 @@ export interface SavedTrack {
   addedAt: number;
   playCount: number;
   lastPlayedAt?: number;
+  kind?: "music" | "podcast";
+  description?: string;
+  podcast?: string;
+  lastPosition?: number;
 }
 
 export interface Playlist {

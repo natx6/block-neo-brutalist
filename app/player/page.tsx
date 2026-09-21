@@ -24,6 +24,7 @@ export default function PlayerPage() {
     repeatMode,
     cycleRepeat,
     saveCurrent,
+    resumedFrom,
   } = usePlayer();
   const [liked, setLiked] = useState(false);
   const [artFailed, setArtFailed] = useState(false);
@@ -265,6 +266,11 @@ export default function PlayerPage() {
               <div className="flex justify-between items-center px-1">
                 <span className="font-display font-bold text-[11px]">{fmtTime(currentTime)}</span>
                 <span className="px-2 py-0.5 rounded-full t-container text-[11px] font-bold">{sourceLabel}</span>
+                {resumedFrom !== null && resumedFrom > 0 && (
+                  <span className="px-2 py-0.5 rounded-full t-secondary-ct text-[11px] font-bold">
+                    Resumed {fmtTime(resumedFrom)}
+                  </span>
+                )}
                 <span className="font-display font-bold text-[11px]">{fmtTime(duration)}</span>
               </div>
             </div>

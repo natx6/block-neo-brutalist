@@ -28,6 +28,8 @@ export default function OfflinePage() {
   const [downloading, setDownloading] = useState(false);
   const [dlPct, setDlPct] = useState(0);
   const [urlError, setUrlError] = useState("");
+  const [kindFilter, setKindFilter] = useState<"all" | "music" | "podcasts">("all");
+  const [artFail, setArtFail] = useState<Set<string>>(new Set());
   const fileRef = useRef<HTMLInputElement>(null);
 
   const refresh = useCallback(async () => {
@@ -205,6 +207,23 @@ export default function OfflinePage() {
           <p className="font-display font-bold text-[22px]">Downloaded Tunes <span className="text-[12px] t-variant rounded-full px-2 py-0.5">{tracks.length}</span></p>
         </div>
 
+        <div className="flex gap-2">
+          {(["all", "music", "podcasts"] as const).map((k) => {
+            const active = kindFilter === k;
+            return (
+              <button
+                key={k}
+                onClick={() => setKindFilter(k)}
+                className={`h-9 px-4 rounded-full font-display font-bold text-[13px] shrink-0 min-h-[36px] capitalize ${
+                  active ? "t-primary clay-button-active" : "t-card clay-card"
+                }`}
+              >
+                {k === "all" ? "All" : k === "music" ? "Music" : "Podcasts"}
+              </button>
+            );
+          })}
+        </div>
+
         {tracks.length === 0 ? (
           <div className="w-full t-card p-6 rounded-2xl clay-card flex flex-col items-center text-center">
             <p className="font-display font-bold text-[16px]">No tunes yet — add from Search.</p>
@@ -213,15 +232,37 @@ export default function OfflinePage() {
             </Link>
           </div>
         ) : (
-          tracks.map((s) => {
+          tracks
+            .filter((s) =>
+              kindFilter === "all" ? true : kindFilter === "podcasts" ? s.kind === "podcast" : s.kind !== "podcast"
+            )
+            .map((s) => {
             const isCurrent = current?.id === s.id && playing;
+            const isPod = s.kind === "podcast";
+            const showArt = !!s.artwork && !artFail.has(s.id);
             return (
               <div key={s.id} className="w-full t-card rounded-2xl p-3 clay-card flex items-center justify-between">
                 <div className="flex items-center gap-3 min-w-0">
-                  <div className="w-12 h-12 rounded-2xl t-container flex items-center justify-center" style={{ background: s.bg }}>
-                    <Icon name={s.icon} className="text-[24px]" />
+                  {showArt ? (
+                    <img
+                      src={s.artwork as string}
+                      alt=""
+                      className="w-12 h-12 rounded-2xl object-cover shrink-0"
+                      onError={() => setArtFail((prev) => new Set(prev).add(s.id))}
+                    />
+                  ) : (
+                    <div className="w-12 h-12 rounded-2xl t-container flex items-center justify-center shrink-0" style={{ background: s.bg }}>
+                      <Icon name={s.icon} className="text-[24px]" />
+                    </div>
+                  )}
+                  <div className="min-w-0">
+                    <p className="font-display font-bold truncate">{s.title}</p>
+                    {isPod && s.podcast ? (
+                      <p className="text-[12px] t-tertiary-text truncate">{s.podcast}</p>
+                    ) : (
+                      <p className="text-[12px] t-tertiary-text truncate">{s.artist}</p>
+                    )}
                   </div>
-                  <div className="min-w-0"><p className="font-display font-bold truncate">{s.title}</p><p className="text-[12px] t-tertiary-text truncate">{s.artist}</p></div>
                 </div>
                 <div className="flex gap-2 items-center">
                   <button onClick={() => play(s.id)} aria-label={`Play ${s.title}`} className="w-10 h-10 rounded-full t-primary-ct clay-card flex items-center justify-center min-w-[44px]">

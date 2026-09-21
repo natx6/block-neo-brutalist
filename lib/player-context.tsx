@@ -14,9 +14,12 @@ export interface NowPlaying {
   artwork?: string | null;
   album?: string;
   year?: string;
-  source?: "stash" | "saavn";
+  source?: "stash" | "saavn" | "podcast";
   sourceId?: string;
   streamUrl?: string | null;
+  audioUrl?: string;
+  description?: string;
+  podcastTitle?: string;
 }
 
 export type RepeatMode = "off" | "all" | "one";
@@ -35,6 +38,8 @@ interface PlayerState {
   shuffle: boolean;
   repeatMode: RepeatMode;
   upNext: NowPlaying[];
+  /** Seconds resumed from on the current podcast episode (null otherwise). */
+  resumedFrom: number | null;
   play: (id: string) => Promise<void>;
   playList: (ids: string[], startIdx?: number) => Promise<void>;
   /** Play a remote URL without saving (search preview). */
@@ -75,7 +80,7 @@ function savedToNowPlaying(t: SavedTrack): NowPlaying {
     icon: t.icon,
     bg: t.bg,
     artwork: t.artwork ?? null,
-    source: t.source === "saavn" ? t.source : "stash",
+    source: t.source === "saavn" || t.source === "podcast" ? t.source : "stash",
     sourceId: t.sourceId ?? undefined,
     streamUrl: null,
   };
@@ -107,7 +112,9 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
   const [shuffle, setShuffle] = useState(false);
   const [repeatMode, setRepeatMode] = useState<RepeatMode>("off");
   const [upNext, setUpNext] = useState<NowPlaying[]>([]);
+  const [resumedFrom, setResumedFrom] = useState<number | null>(null);
   const sleepTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastPosSaveRef = useRef(0);
 
   // Refs mirroring state for use inside stable callbacks / event listeners.
   const currentRef = useRef<NowPlaying | null>(null);
@@ -153,6 +160,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     if (urlRef.current) URL.revokeObjectURL(urlRef.current);
     const url = URL.createObjectURL(saved.blob);
     urlRef.current = url;
+    setResumedFrom(null);
     if (audioRef.current) {
       audioRef.current.src = url;
       audioRef.current.currentTime = 0;
@@ -165,13 +173,23 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
       icon: saved.icon,
       bg: saved.bg,
       artwork: saved.artwork ?? null,
-      source: saved.source === "saavn" ? saved.source : "stash",
+      source: saved.source === "saavn" || saved.source === "podcast" ? saved.source : "stash",
       sourceId: saved.sourceId ?? undefined,
       streamUrl: null,
     });
     setDuration(saved.durationSec || 0);
     try {
       await audioRef.current?.play();
+    } catch {}
+    // Podcasts resume where they stopped.
+    try {
+      const pos = saved.kind === "podcast" ? saved.lastPosition || 0 : 0;
+      const total = saved.durationSec || 0;
+      if (pos > 15 && total > 0 && pos < total - 30 && audioRef.current) {
+        audioRef.current.currentTime = pos;
+        setCurrentTime(pos);
+        setResumedFrom(Math.floor(pos));
+      }
     } catch {}
     await db.tracks.update(id, { playCount: (saved.playCount || 0) + 1, lastPlayedAt: Date.now() }).catch(() => {});
     setMediaMeta(saved.title, saved.artist);
@@ -237,10 +255,36 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     try {
       setOfflineModeState(loadSettings().offlineMode);
     } catch {}
-    const onTime = () => setCurrentTime(a.currentTime || 0);
+    const onTime = () => {
+      setCurrentTime(a.currentTime || 0);
+      // Remember podcast position (throttled) so episodes resume later.
+      try {
+        const cur = currentRef.current;
+        const now = Date.now();
+        if (
+          cur &&
+          (cur.source === "podcast" || cur.id.startsWith("pod-")) &&
+          a.currentTime > 10 &&
+          now - lastPosSaveRef.current > 15000
+        ) {
+          lastPosSaveRef.current = now;
+          db.tracks.update(cur.id, { lastPosition: Math.floor(a.currentTime) }).catch(() => {});
+        }
+      } catch {}
+    };
     const onDur = () => setDuration(a.duration || 0);
     const onPlay = () => setPlaying(true);
-    const onPause = () => setPlaying(false);
+    const onPause = () => {
+      setPlaying(false);
+      // Final position save for podcasts.
+      try {
+        const cur = currentRef.current;
+        if (cur && (cur.source === "podcast" || cur.id.startsWith("pod-")) && a.currentTime > 10) {
+          lastPosSaveRef.current = Date.now();
+          db.tracks.update(cur.id, { lastPosition: Math.floor(a.currentTime) }).catch(() => {});
+        }
+      } catch {}
+    };
     const onEnd = () => {
       (async () => {
         try {
@@ -350,6 +394,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
       }
       setCurrent({ ...meta, streamUrl: url });
       setDuration(meta.durationSec || 0);
+      setResumedFrom(null);
       if (audioRef.current) {
         audioRef.current.src = url;
         audioRef.current.currentTime = 0;
@@ -385,6 +430,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     if (a && isFinite(sec)) {
       a.currentTime = Math.max(0, Math.min(sec, a.duration || sec));
       setCurrentTime(a.currentTime);
+      setResumedFrom(null);
     }
   }, []);
 
@@ -436,6 +482,32 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
         );
         return rec.id;
       }
+      if (src === "podcast") {
+        if (!cur.sourceId) throw new Error("missing podcast sourceId");
+        const { savePodcastEp } = await import("./downloads");
+        const rec = await savePodcastEp(
+          {
+            id: cur.sourceId,
+            title: cur.podcastTitle || cur.artist,
+            artist: cur.artist,
+            artwork: cur.artwork ?? null,
+            feedUrl: "",
+            genre: "",
+          },
+          {
+            id: cur.sourceId,
+            title: cur.title,
+            description: cur.description || "",
+            durationSec: cur.durationSec,
+            date: "",
+            audioUrl: cur.audioUrl || cur.streamUrl || "",
+            artwork: cur.artwork ?? null,
+          },
+          q,
+          onProgress
+        );
+        return rec.id;
+      }
       throw new Error("cannot-save");
     },
     []
@@ -451,6 +523,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
       shuffle,
       repeatMode,
       upNext,
+      resumedFrom,
       play,
       playList,
       preview,
@@ -463,7 +536,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
       cycleRepeat,
       saveCurrent,
     }),
-    [current, playing, currentTime, duration, offlineMode, shuffle, repeatMode, upNext, play, playList, preview, toggle, seek, step, setOfflineMode, toggleShuffle, cycleRepeat, saveCurrent]
+    [current, playing, currentTime, duration, offlineMode, shuffle, repeatMode, upNext, resumedFrom, play, playList, preview, toggle, seek, step, setOfflineMode, toggleShuffle, cycleRepeat, saveCurrent]
   );
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;

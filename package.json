@@ -4,17 +4,19 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "next build --webpack",
     "start": "next start",
     "lint": "eslint"
   },
   "dependencies": {
+    "@serwist/next": "^9.5.12",
     "crypto-js": "^4.2.0",
     "dexie": "^4.4.6",
     "music-metadata-browser": "^2.5.11",
     "next": "16.3.5",
     "react": "19.2.8",
-    "react-dom": "19.2.8"
+    "react-dom": "19.2.8",
+    "serwist": "^9.5.12"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",

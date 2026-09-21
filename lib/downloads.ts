@@ -1,6 +1,7 @@
 import { db } from "./db";
 import { ART_FALLBACKS, cleanFileTitle } from "./catalog";
 import { streamUrl, type SaavnResult } from "./saavn";
+import type { PodcastEp, PodcastShow } from "./podcasts";
 
 import { parseBlob } from "music-metadata-browser";
 
@@ -219,4 +220,49 @@ export async function saveSaavnTrack(
     }
   }
   throw lastError instanceof Error ? lastError : new Error("saavn-download-failed");
+}
+
+export async function savePodcastEp(
+  show: PodcastShow,
+  ep: PodcastEp,
+  quality = "Good",
+  onProgress?: (pct: number) => void
+) {
+  const id = `pod-${ep.id}`;
+  const existing = await db.tracks.get(id);
+  if (existing) return existing;
+  let lastError: unknown = null;
+  const urls = [ep.audioUrl, `/api/fetch?url=${encodeURIComponent(ep.audioUrl)}`];
+  for (const u of urls) {
+    try {
+      const blob = await downloadWithProgress(u, (p) => onProgress?.(p));
+      if (blob.size < 1024) throw new Error("podcast-download-failed");
+      const probed = await probeDuration(blob);
+      const rec = {
+        id,
+        title: ep.title,
+        artist: show.artist || show.title,
+        durationSec: probed || ep.durationSec,
+        icon: "podcasts",
+        bg: "#D6F0FF",
+        artwork: ep.artwork || show.artwork,
+        source: "podcast",
+        sourceId: ep.id,
+        kind: "podcast" as const,
+        description: (ep.description || "").slice(0, 300),
+        podcast: show.title,
+        blob,
+        mime: blob.type || "audio/mpeg",
+        size: blob.size,
+        quality,
+        addedAt: Date.now(),
+        playCount: 0,
+      };
+      await db.tracks.put(rec);
+      return rec;
+    } catch (e) {
+      lastError = e;
+    }
+  }
+  throw lastError instanceof Error ? lastError : new Error("podcast-download-failed");
 }

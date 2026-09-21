@@ -6,10 +6,12 @@ import { fmtTime } from "../../lib/catalog";
 import { listTracks, type SavedTrack } from "../../lib/db";
 import {
   loadSettings,
+  savePodcastEp,
   saveSaavnTrack,
 } from "../../lib/downloads";
 import { searchSaavn, streamUrl, type SaavnResult } from "../../lib/saavn";
 import { loadSpCreds, spCanonical, type SpCanonical } from "../../lib/spotify";
+import { searchPodcasts, showEpisodes, type PodcastEp, type PodcastShow } from "../../lib/podcasts";
 import { usePlayer } from "../../lib/player-context";
 
 // Survives in-app navigation (module singleton): back button restores
@@ -39,7 +41,7 @@ function saavnMeta(r: SaavnResult) {
 }
 
 export default function SearchPage() {
-  const { current, playing, play, preview } = usePlayer();
+  const { current, playing, play, preview, toggle } = usePlayer();
   const [query, setQuery] = useState(searchCache.query);
   const [debounced, setDebounced] = useState(searchCache.query.trim());
   const [saved, setSaved] = useState<SavedTrack[]>([]);
@@ -53,6 +55,14 @@ export default function SearchPage() {
   const [dlProg, setDlProg] = useState<Record<string, number>>({});
   const [previewingId, setPreviewingId] = useState<string | null>(null);
   const [previewError, setPreviewError] = useState("");
+  const [mode, setMode] = useState<"music" | "podcasts">("music");
+  const [podShows, setPodShows] = useState<PodcastShow[]>([]);
+  const [podSearching, setPodSearching] = useState(false);
+  const [podUnavailable, setPodUnavailable] = useState(false);
+  const [podImgFail, setPodImgFail] = useState<Set<string>>(new Set());
+  const [expandedShow, setExpandedShow] = useState<string | null>(null);
+  const [episodes, setEpisodes] = useState<Record<string, PodcastEp[]>>({});
+  const [epsLoading, setEpsLoading] = useState<string | null>(null);
   const mainRef = useRef<HTMLElement>(null);
 
   const refresh = useCallback(async () => {
@@ -98,6 +108,7 @@ export default function SearchPage() {
 
   useEffect(() => {
     let cancelled = false;
+    if (mode !== "music") return;
     if (!debounced) {
       setSaavnResults([]);
       setSearching(false);
@@ -149,7 +160,36 @@ export default function SearchPage() {
     return () => {
       cancelled = true;
     };
-  }, [debounced]);
+  }, [debounced, mode]);
+
+  useEffect(() => {
+    let cancelled = false;
+    if (mode !== "podcasts") return;
+    if (!debounced) {
+      setPodShows([]);
+      setPodSearching(false);
+      setPodUnavailable(false);
+      return;
+    }
+    setPodSearching(true);
+    setPodUnavailable(false);
+    searchPodcasts(debounced, 20).then(
+      (shows) => {
+        if (cancelled) return;
+        setPodShows(shows);
+        setPodSearching(false);
+      },
+      () => {
+        if (cancelled) return;
+        setPodShows([]);
+        setPodUnavailable(true);
+        setPodSearching(false);
+      }
+    );
+    return () => {
+      cancelled = true;
+    };
+  }, [debounced, mode]);
 
   function scoreMatch(r: { title: string; artist: string; durationSec: number }, c: SpCanonical): number {
     let score = 0;
@@ -212,6 +252,86 @@ export default function SearchPage() {
     url: streamUrl(r, loadSettings().quality),
   }));
 
+  function podMeta(show: PodcastShow, ep: PodcastEp) {
+    return {
+      id: `pod-${ep.id}`,
+      title: ep.title,
+      artist: show.artist || show.title,
+      durationSec: ep.durationSec,
+      icon: "podcasts",
+      bg: "#D6F0FF",
+      artwork: ep.artwork || show.artwork,
+      source: "podcast" as const,
+      sourceId: ep.id,
+      audioUrl: ep.audioUrl,
+      description: ep.description,
+      podcastTitle: show.title,
+    };
+  }
+
+  function shortDate(iso: string): string {
+    try {
+      const d = new Date(iso);
+      if (isNaN(d.getTime())) return "";
+      return d.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
+    } catch {
+      return "";
+    }
+  }
+
+  const handleToggleShow = async (show: PodcastShow) => {
+    if (expandedShow === show.id) {
+      setExpandedShow(null);
+      return;
+    }
+    setExpandedShow(show.id);
+    if (episodes[show.id]) return;
+    setEpsLoading(show.id);
+    try {
+      const eps = await showEpisodes(show.id);
+      setEpisodes((prev) => ({ ...prev, [show.id]: eps }));
+    } catch {
+      setEpisodes((prev) => ({ ...prev, [show.id]: [] }));
+    } finally {
+      setEpsLoading(null);
+    }
+  };
+
+  const handlePreviewPod = async (show: PodcastShow, ep: PodcastEp) => {
+    const id = `pod-${ep.id}`;
+    if (current?.id === id) {
+      await toggle();
+      return;
+    }
+    if (previewingId) return;
+    setPreviewingId(id);
+    setPreviewError("");
+    try {
+      await preview(podMeta(show, ep), ep.audioUrl);
+    } catch {
+      setPreviewError("Couldn't load that preview — try again in a bit.");
+    } finally {
+      setPreviewingId(null);
+    }
+  };
+
+  const handleSavePod = async (show: PodcastShow, ep: PodcastEp) => {
+    const key = `pod-${ep.id}`;
+    if (savedIds.has(key) || dlProg[key] !== undefined) return;
+    setDlProg((prev) => ({ ...prev, [key]: 0 }));
+    try {
+      await savePodcastEp(show, ep, loadSettings().quality, (p) =>
+        setDlProg((prev) => ({ ...prev, [key]: p }))
+      );
+      await refresh();
+    } catch {}
+    setDlProg((prev) => {
+      const next = { ...prev };
+      delete next[key];
+      return next;
+    });
+  };
+
   return (
     <div className="t-bg h-dvh max-w-[430px] mx-auto flex flex-col relative overflow-hidden">
       <TopBar title="Search" />
@@ -224,7 +344,7 @@ export default function SearchPage() {
             <input
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search millions of tracks..."
+              placeholder={mode === "podcasts" ? "Search podcasts..." : "Search millions of tracks..."}
               aria-label="Search tracks"
               className="flex-1 bg-transparent font-display font-semibold text-[16px] focus:outline-none min-w-0"
             />
@@ -232,9 +352,184 @@ export default function SearchPage() {
               <Icon name="close" className="text-[18px]" />
             </button>
           </div>
+          <div className="flex gap-2 mt-3">
+            {(["music", "podcasts"] as const).map((m) => {
+              const active = mode === m;
+              return (
+                <button
+                  key={m}
+                  onClick={() => setMode(m)}
+                  className={`h-9 px-4 rounded-full font-display font-bold text-[13px] shrink-0 min-h-[36px] capitalize ${
+                    active ? "t-primary clay-button-active" : "t-card clay-card"
+                  }`}
+                >
+                  {m === "music" ? "Music" : "Podcasts"}
+                </button>
+              );
+            })}
+          </div>
         </div>
 
-        {showingResults ? (
+        {mode === "podcasts" ? (
+          <>
+            {!showingResults ? (
+              <div className="w-full t-card p-6 rounded-2xl clay-card flex flex-col items-center text-center">
+                <div className="w-14 h-14 rounded-full t-primary-ct clay-thumb flex items-center justify-center mb-2">
+                  <Icon name="podcasts" fill className="text-[28px]" />
+                </div>
+                <h3 className="font-display font-bold text-[22px]">Find a show</h3>
+                <p className="text-[14px] t-muted max-w-[280px]">Search above for podcasts. Saved episodes live in Offline.</p>
+              </div>
+            ) : podSearching ? (
+              <div className="w-full t-card p-6 rounded-2xl clay-card flex flex-col items-center text-center gap-3">
+                <div className="flex items-center gap-2">
+                  <span className="w-3.5 h-3.5 rounded-full t-primary-ct animate-bounce" />
+                  <span className="w-3.5 h-3.5 rounded-full t-secondary-ct animate-bounce [animation-delay:150ms]" />
+                  <span className="w-3.5 h-3.5 rounded-full bg-[var(--tertiary-ct)] animate-bounce [animation-delay:300ms]" />
+                </div>
+                <p className="text-[13px] font-bold t-muted">Searching the clouds...</p>
+              </div>
+            ) : (
+              <>
+                <div className="flex items-center justify-between px-1">
+                  <div className="flex items-center gap-2">
+                    <span className="font-display font-bold text-[18px]">Shows</span>
+                    {!podUnavailable && (
+                      <span className="font-display font-bold text-[12px] t-tertiary-ct px-2.5 py-0.5 rounded-full clay-thumb">
+                        {podShows.length}
+                      </span>
+                    )}
+                  </div>
+                  <span className="text-[11px] font-bold t-muted">Tap to preview</span>
+                </div>
+
+                {previewError && (
+                  <p className="text-[12px] font-bold t-tertiary-text px-1">{previewError}</p>
+                )}
+
+                {podUnavailable ? (
+                  <p className="text-[12px] font-bold t-muted px-1">
+                    Podcasts unavailable right now.
+                  </p>
+                ) : podShows.length === 0 ? (
+                  <div className="w-full t-card p-6 rounded-2xl clay-card flex flex-col items-center text-center">
+                    <p className="font-display font-bold text-[18px]">No matches</p>
+                    <p className="text-[13px] t-muted">Try a different show or topic.</p>
+                  </div>
+                ) : (
+                  <div className="flex flex-col gap-3">
+                    {podShows.map((show) => {
+                      const expanded = expandedShow === show.id;
+                      const eps = episodes[show.id];
+                      const loading = epsLoading === show.id;
+                      const showArt = !!show.artwork && !podImgFail.has(show.id);
+                      return (
+                        <div key={show.id} className="w-full t-card p-3 rounded-2xl clay-card flex flex-col gap-2">
+                          <button onClick={() => handleToggleShow(show)} className="flex items-center gap-3 min-w-0 flex-1 text-left">
+                            {showArt ? (
+                              <img
+                                src={show.artwork as string}
+                                alt=""
+                                width={56}
+                                height={56}
+                                onError={() => setPodImgFail((prev) => new Set(prev).add(show.id))}
+                                className="w-14 h-14 rounded-2xl object-cover clay-thumb shrink-0"
+                              />
+                            ) : (
+                              <div className="w-14 h-14 rounded-2xl clay-thumb flex items-center justify-center shrink-0" style={{ background: "#D6F0FF" }}>
+                                <Icon name="podcasts" className="text-[28px]" />
+                              </div>
+                            )}
+                            <div className="min-w-0 flex-1">
+                              <p className="font-display font-bold text-[16px] truncate">{show.title}</p>
+                              <p className="text-[12px] t-muted truncate">
+                                {show.artist}{show.genre ? ` • ${show.genre}` : ""}
+                              </p>
+                            </div>
+                            <Icon name={expanded ? "expand_less" : "expand_more"} className="shrink-0" />
+                          </button>
+                          {expanded && (
+                            <div className="flex flex-col gap-2 pt-1">
+                              {loading ? (
+                                <p className="text-[12px] font-bold t-muted px-1">Loading episodes...</p>
+                              ) : !eps || eps.length === 0 ? (
+                                <p className="text-[12px] font-bold t-muted px-1">No episodes found.</p>
+                              ) : (
+                                eps.map((ep) => {
+                                  const key = `pod-${ep.id}`;
+                                  const isSaved = savedIds.has(key);
+                                  const prog = dlProg[key];
+                                  const isDownloading = prog !== undefined;
+                                  const isCurrent = current?.id === key && playing;
+                                  const isPreviewing = previewingId === key;
+                                  return (
+                                    <div
+                                      key={ep.id}
+                                      onClick={() => handlePreviewPod(show, ep)}
+                                      className="w-full t-container p-3 rounded-2xl clay-card flex items-center justify-between gap-2 text-left cursor-pointer"
+                                    >
+                                      <div className="min-w-0 flex-1">
+                                        <p className="font-display font-bold text-[14px] truncate">{ep.title}</p>
+                                        <p className="text-[12px] t-muted truncate">
+                                          {isPreviewing
+                                            ? "Loading preview..."
+                                            : `${shortDate(ep.date)}${shortDate(ep.date) && ep.durationSec ? " • " : ""}${ep.durationSec ? fmtTime(ep.durationSec) : ""}`}
+                                        </p>
+                                        {ep.description ? (
+                                          <p className="text-[11px] t-muted truncate">{ep.description.slice(0, 300)}</p>
+                                        ) : null}
+                                      </div>
+                                      {isSaved ? (
+                                        <span aria-label="Saved" className="w-11 h-11 rounded-full bg-[#c7f5dc] clay-thumb flex items-center justify-center shrink-0 text-[#144d32]">
+                                          <Icon name="check" />
+                                        </span>
+                                      ) : isDownloading ? (
+                                        <span className="relative w-11 h-11 rounded-full t-card clay-thumb flex items-center justify-center shrink-0">
+                                          <svg className="w-11 h-11 -rotate-90" viewBox="0 0 44 44">
+                                            <circle cx="22" cy="22" r="17" stroke="#eedbff" strokeWidth="4" fill="none" />
+                                            <circle
+                                              cx="22"
+                                              cy="22"
+                                              r="17"
+                                              stroke="#306385"
+                                              strokeWidth="4"
+                                              fill="none"
+                                              strokeDasharray="106.8"
+                                              strokeDashoffset={106.8 * (1 - prog / 100)}
+                                              strokeLinecap="round"
+                                            />
+                                          </svg>
+                                          <span className="absolute text-[10px] font-bold">{prog}%</span>
+                                        </span>
+                                      ) : (
+                                        <button
+                                          type="button"
+                                          aria-label={`Download ${ep.title}`}
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            handleSavePod(show, ep);
+                                          }}
+                                          className="w-11 h-11 rounded-full t-tertiary-ct clay-thumb flex items-center justify-center shrink-0"
+                                        >
+                                          <Icon name={isCurrent ? "pause" : "download"} />
+                                        </button>
+                                      )}
+                                    </div>
+                                  );
+                                })
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </>
+            )}
+            <p className="text-[11px] font-bold t-muted px-1">Saved episodes live in Offline.</p>
+          </>
+        ) : showingResults ? (
           <>
             {searching ? (
               <div className="w-full t-card p-6 rounded-2xl clay-card flex flex-col items-center text-center gap-3">

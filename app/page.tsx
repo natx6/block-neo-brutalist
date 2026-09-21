@@ -35,7 +35,7 @@ export default function Home() {
   const matchCache = useRef(new Map<string, SaavnResult>());
   const [savedIds, setSavedIds] = useState<Set<string>>(new Set());
   const [dlProg, setDlProg] = useState<Record<string, number>>({});
-  const [moreArtist, setMoreArtist] = useState("");
+  const [moreArtists, setMoreArtists] = useState<string[]>([]);
   const [moreTracks, setMoreTracks] = useState<SaavnResult[]>([]);
   const [moreLoading, setMoreLoading] = useState(false);
   const [moreArtFail, setMoreArtFail] = useState<Set<string>>(new Set());
@@ -67,32 +67,39 @@ export default function Home() {
     } catch {
       return;
     }
-    setSavedIds(new Set(tracks.map((t) => t.id)));
-    const counts = new Map<string, { name: string; n: number }>();
+    const savedSet = new Set(tracks.map((t) => t.id));
+    setSavedIds(savedSet);
+    const scores = new Map<string, { name: string; score: number }>();
     for (const t of tracks) {
       const name = (t.artist || "").trim();
       if (!name) continue;
       const key = name.toLowerCase();
-      const prev = counts.get(key);
-      counts.set(key, { name, n: (prev?.n || 0) + 1 });
+      const prev = scores.get(key);
+      scores.set(key, { name, score: (prev?.score || 0) + 1 + (t.playCount || 0) });
     }
-    let top = "";
-    let topN = 0;
-    for (const { name, n } of counts.values()) {
-      if (n > topN) {
-        topN = n;
-        top = name;
-      }
-    }
-    if (!top) {
-      setMoreArtist("");
+    const top = [...scores.values()]
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 2);
+    if (!top.length) {
+      setMoreArtists([]);
       setMoreTracks([]);
       return;
     }
-    setMoreArtist(top);
+    setMoreArtists(top.map((t) => t.name));
     setMoreLoading(true);
     try {
-      setMoreTracks(await searchSaavn(top, 10));
+      const per = await Promise.all(top.map((t) => searchSaavn(t.name, 6).catch(() => [] as SaavnResult[])));
+      const seen = new Set<string>();
+      const merged: SaavnResult[] = [];
+      for (const list of per) {
+        for (const r of list) {
+          if (seen.has(r.id)) continue;
+          seen.add(r.id);
+          if (savedSet.has(`saavn-${r.id}`)) continue;
+          merged.push(r);
+        }
+      }
+      setMoreTracks(merged.slice(0, 10));
     } catch {
       setMoreTracks([]);
     } finally {
@@ -365,10 +372,13 @@ export default function Home() {
           )}
         </div>
 
-        {moreArtist !== "" && (
+        {moreArtists.length > 0 && (
           <div className="mt-4">
             <div className="px-5 flex items-center justify-between mb-2">
-              <p className="font-display font-bold text-[22px]">More like {moreArtist}</p>
+              <div className="min-w-0">
+                <p className="font-display font-bold text-[22px]">Picked for you</p>
+                <p className="text-[12px] t-muted truncate">{moreArtists.join(" • ")}</p>
+              </div>
             </div>
             {moreLoading && moreTracks.length === 0 ? (
               <p className="text-[13px] font-bold t-muted px-5">Catching today&apos;s hits...</p>
