@@ -493,6 +493,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
             artwork: cur.artwork ?? null,
             feedUrl: "",
             genre: "",
+            description: cur.description ?? "",
           },
           {
             id: cur.sourceId,

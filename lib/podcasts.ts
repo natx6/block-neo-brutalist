@@ -5,6 +5,7 @@ export interface PodcastShow {
   artwork: string | null;
   feedUrl: string;
   genre: string;
+  description: string;
 }
 
 export interface PodcastEp {
@@ -28,6 +29,7 @@ function showOf(r: any): PodcastShow | null {
     artwork: (r?.artworkUrl600 as string) || (r?.artworkUrl100 as string) || null,
     feedUrl: String(r?.feedUrl ?? ""),
     genre: String(r?.primaryGenreName ?? ""),
+    description: String(r?.description ?? ""),
   };
 }
 
@@ -70,4 +72,39 @@ export async function showEpisodes(collectionId: string | number): Promise<Podca
   return results
     .map(epOf)
     .filter((e: PodcastEp | null): e is PodcastEp => e !== null);
+}
+
+export async function getPodcastShow(
+  collectionId: string | number
+): Promise<{ show: PodcastShow | null; episodes: PodcastEp[] }> {
+  const res = await fetch(
+    `https://itunes.apple.com/lookup?id=${encodeURIComponent(String(collectionId))}&entity=podcastEpisode&limit=100`
+  );
+  if (!res.ok) throw new Error("podcast-search-failed");
+  const json = await res.json();
+  const results = Array.isArray(json?.results) ? json.results : [];
+  let show: PodcastShow | null = null;
+  const episodes: PodcastEp[] = [];
+  for (const r of results) {
+    if (!show && (r?.wrapperType === "collection" || r?.kind === "podcast")) {
+      show = showOf(r);
+      continue;
+    }
+    const ep = epOf(r);
+    if (ep) episodes.push(ep);
+  }
+  // Fallback: some lookups return only episodes; synthesize the show header.
+  if (!show && episodes.length > 0) {
+    const first = results[0] || {};
+    show = {
+      id: String(collectionId),
+      title: String(first?.collectionName ?? "Podcast"),
+      artist: String(first?.artistName ?? ""),
+      artwork: (first?.artworkUrl600 as string) || (first?.artworkUrl100 as string) || null,
+      feedUrl: "",
+      genre: "",
+      description: "",
+    };
+  }
+  return { show, episodes };
 }
