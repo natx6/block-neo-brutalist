@@ -183,7 +183,7 @@ export default function PlayerPage() {
   };
 
   return (
-    <div className={`max-w-[430px] mx-auto flex flex-col relative overflow-hidden h-dvh transition-transform duration-300 ease-in ${leaving ? "translate-y-full" : ""}`} style={{ background: "linear-gradient(180deg, var(--bg) 0%, var(--container) 55%, var(--bg) 100%)" }}>
+    <div className={`w-full flex flex-col relative overflow-hidden h-dvh transition-transform duration-300 ease-in ${leaving ? "translate-y-full" : ""}`} style={{ background: "linear-gradient(180deg, var(--bg) 0%, var(--container) 55%, var(--bg) 100%)" }}>
       {/* Edge-to-edge animated backdrop — drifts while playing, still when paused */}
       <div className="fixed inset-0 pointer-events-none" aria-hidden>
         <div
@@ -210,7 +210,7 @@ export default function PlayerPage() {
         </div>
       </header>
 
-      <main className="flex-1 min-h-0 pt-[calc(4rem+env(safe-area-inset-top))] pb-3 px-5 flex flex-col overflow-hidden relative z-10">
+      <main className="w-full max-w-[430px] mx-auto flex-1 min-h-0 pt-[calc(4rem+env(safe-area-inset-top))] pb-3 px-5 flex flex-col overflow-hidden relative z-10">
 
         {!current ? (
           <div className="flex flex-col items-center text-center pt-4">
