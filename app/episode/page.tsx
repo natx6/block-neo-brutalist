@@ -3,7 +3,7 @@
 import { Suspense, useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { Icon, MiniPlayer } from "../components/Nav";
+import { Icon, MiniPlayer, BottomNav } from "../components/Nav";
 import { fmtTime } from "../../lib/catalog";
 import { listTracks } from "../../lib/db";
 import { loadSettings, savePodcastEp } from "../../lib/downloads";
@@ -188,7 +188,7 @@ function EpisodeContent() {
         </div>
       </header>
 
-      <main className="flex-1 min-h-0 pt-[calc(4rem+env(safe-area-inset-top))] pb-32 px-5 flex flex-col gap-4 overflow-y-auto overscroll-contain">
+      <main className="flex-1 min-h-0 pt-[calc(4rem+env(safe-area-inset-top))] pb-[150px] px-5 flex flex-col gap-4 overflow-y-auto overscroll-contain">
         <div className="pt-3" />
         {loading ? (
           <div className="w-full t-card p-6 rounded-2xl clay-card flex flex-col items-center text-center gap-3">
@@ -263,6 +263,7 @@ function EpisodeContent() {
         )}
       </main>
       <MiniPlayer />
+      <BottomNav active="" />
     </div>
   );
 }
