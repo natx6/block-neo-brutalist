@@ -4,8 +4,8 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { BottomNav, MiniPlayer, Icon } from "./components/Nav";
 import AppIcon from "./components/AppIcon";
-import { listTracks, recentTracks, type SavedTrack } from "../lib/db";
-import { loadSettings, saveSaavnTrack } from "../lib/downloads";
+import { getTrack, listTracks, recentTracks, type SavedTrack } from "../lib/db";
+import { loadSettings, saveFileTracks, saveSaavnTrack } from "../lib/downloads";
 import { fetchCharts, GENRES, type ChartSong } from "../lib/charts";
 import { searchSaavn, streamUrl, type SaavnResult } from "../lib/saavn";
 import { usePlayer } from "../lib/player-context";
@@ -24,7 +24,9 @@ function chartKey(c: ChartSong) {
 export default function Home() {
   const [recent, setRecent] = useState<SavedTrack[]>([]);
   const [artFail, setArtFail] = useState<Set<string>>(new Set());
-  const { current, playing, play, preview, toggle } = usePlayer();
+  const [importStatus, setImportStatus] = useState("");
+  const fileRef = useRef<HTMLInputElement>(null);
+  const { current, playing, play, preview, toggle, history } = usePlayer();
 
   const [genre, setGenre] = useState("");
   const [charts, setCharts] = useState<ChartSong[]>([]);
@@ -48,6 +50,58 @@ export default function Home() {
       setRecent(await recentTracks(4));
     } catch {}
   }, []);
+
+  // Tap a history row: saved tracks play from the stash, previews re-stream.
+  const playOrPreview = useCallback(
+    async (meta: (typeof history)[number]) => {
+      if (current?.id === meta.id) {
+        await toggle();
+        return;
+      }
+      try {
+        const saved = await getTrack(meta.id).catch(() => undefined);
+        if (saved) {
+          await play(meta.id);
+          return;
+        }
+      } catch {}
+    if (meta.streamUrl) {
+        try {
+          await preview(meta, meta.streamUrl);
+        } catch {}
+      }
+    },
+    [current, play, preview, toggle]
+  );
+
+  const handleFiles = async (files: FileList | null) => {
+    if (!files || files.length === 0) return;
+    const count = files.length;
+    setImportStatus("Importing...");
+    try {
+      await saveFileTracks(files, loadSettings().quality);
+      setImportStatus(`Saved ${count} song(s)`);
+      await refresh();
+    } catch (err) {
+      setImportStatus(err instanceof Error ? err.message : "Import failed");
+    }
+    if (fileRef.current) fileRef.current.value = "";
+  };
+
+  // Session history first (includes previews), saved recents as fallback.
+  const recentRows =
+    history.length > 0
+      ? history.slice(0, 8)
+      : recent.map((t) => ({
+          id: t.id,
+          title: t.title,
+          artist: t.artist,
+          durationSec: t.durationSec,
+          icon: t.icon,
+          bg: t.bg,
+          artwork: t.artwork ?? null,
+          streamUrl: null as string | null,
+        }));
 
   const fetchChartSongs = useCallback(async (g: string) => {
     setChartsLoading(true);
@@ -462,26 +516,44 @@ export default function Home() {
             <p className="font-display font-bold text-[22px]">Recently Played</p>
             <Link href="/library" className="font-display font-bold text-[12px] t-primary-text min-h-[44px] flex items-center">See all</Link>
           </div>
-          {recent.length === 0 ? (
+          {recentRows.length === 0 ? (
             <div className="px-5">
               <div className="w-full t-card p-6 rounded-2xl clay-card flex flex-col items-center text-center">
                 <div className="w-14 h-14 rounded-full t-primary-ct clay-thumb flex items-center justify-center mb-2">
                   <Icon name="cloud" fill className="text-[28px]" />
                 </div>
-                <p className="font-display font-bold text-[18px]">Your stash is empty</p>
-                <p className="text-[13px] t-muted mt-1">Import audio from your device and it will live here.</p>
-                <Link href="/offline" className="mt-3 h-11 px-6 rounded-full t-primary font-display font-bold text-[14px] clay-button-active flex items-center min-h-[44px]">
-                  Add music
-                </Link>
+                <p className="font-display font-bold text-[18px]">Nothing played yet</p>
+                <p className="text-[13px] t-muted mt-1">Import audio or tap anything to play.</p>
+                <button
+                  type="button"
+                  onClick={() => fileRef.current?.click()}
+                  className="mt-3 h-11 px-6 rounded-full t-primary font-display font-bold text-[14px] clay-button-active flex items-center gap-1.5 min-h-[44px]"
+                >
+                  <Icon name="upload" className="text-[20px]" />
+                  Import music
+                </button>
+                <input
+                  ref={fileRef}
+                  type="file"
+                  accept="audio/*,.mp3,.m4a,.wav,.ogg,.flac,.aac,.opus,.weba"
+                  multiple
+                  tabIndex={-1}
+                  aria-hidden
+                  className="absolute w-px h-px opacity-0 overflow-hidden pointer-events-none"
+                  onChange={(e) => handleFiles(e.target.files)}
+                />
+                {importStatus && (
+                  <p className="text-[12px] font-bold t-muted mt-2">{importStatus}</p>
+                )}
               </div>
             </div>
           ) : (
             <div className="flex gap-4 overflow-x-auto px-5 pb-3 pt-1 no-scrollbar">
-              {recent.map((t) => {
+              {recentRows.map((t) => {
                 const isCurrent = current?.id === t.id && playing;
                 const showArt = !!t.artwork && !artFail.has(t.id);
                 return (
-                  <button key={t.id} onClick={() => play(t.id)} className="flex flex-col gap-2 shrink-0 w-[140px] text-left active:scale-95 transition-transform">
+                  <button key={t.id} onClick={() => playOrPreview(t)} className="flex flex-col gap-2 shrink-0 w-[140px] text-left active:scale-95 transition-transform">
                     <div className="relative w-[140px] h-[140px] rounded-[28px] p-2 clay-card flex items-center justify-center" style={{ background: t.bg }}>
                       {showArt ? (
                         <img

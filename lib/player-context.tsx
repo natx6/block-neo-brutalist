@@ -38,6 +38,8 @@ interface PlayerState {
   shuffle: boolean;
   repeatMode: RepeatMode;
   upNext: NowPlaying[];
+  /** Recently played, previews included (session only, newest first). */
+  history: NowPlaying[];
   /** Seconds resumed from on the current podcast episode (null otherwise). */
   resumedFrom: number | null;
   play: (id: string) => Promise<void>;
@@ -113,8 +115,30 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
   const [repeatMode, setRepeatMode] = useState<RepeatMode>("off");
   const [upNext, setUpNext] = useState<NowPlaying[]>([]);
   const [resumedFrom, setResumedFrom] = useState<number | null>(null);
+  const [history, setHistory] = useState<NowPlaying[]>([]);
+  const historyRef = useRef<NowPlaying[]>([]);
   const sleepTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastPosSaveRef = useRef(0);
+  const lastPersistRef = useRef(0);
+  // Restored playback position (id + seconds), consumed on first real load.
+  const pendingRef = useRef<{ id: string; pos: number } | null>(null);
+
+  const STATE_KEY = "puff-player-state-v1";
+
+  const persistNow = useCallback(() => {
+    try {
+      const cur = currentRef.current;
+      const a = audioRef.current;
+      if (!cur) {
+        localStorage.removeItem(STATE_KEY);
+        return;
+      }
+      localStorage.setItem(
+        STATE_KEY,
+        JSON.stringify({ meta: cur, position: Math.floor(a?.currentTime || 0) })
+      );
+    } catch {}
+  }, []);
 
   // Refs mirroring state for use inside stable callbacks / event listeners.
   const currentRef = useRef<NowPlaying | null>(null);
@@ -131,6 +155,31 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     repeatRef.current = repeatMode;
   }, [repeatMode]);
 
+  const pushHistory = useCallback((meta: NowPlaying) => {
+    const list = [meta, ...historyRef.current.filter((h) => h.id !== meta.id)].slice(0, 12);
+    historyRef.current = list;
+    setHistory(list);
+  }, []);
+
+  const consumePendingPos = useCallback(() => {
+    const p = pendingRef.current;
+    pendingRef.current = null;
+    const a = audioRef.current;
+    if (!a || !p || !(p.pos > 15)) return;
+    if (currentRef.current?.id !== p.id) return;
+    const apply = () => {
+      try {
+        if (isFinite(a.duration) && a.duration > 0 && p.pos < a.duration - 5) {
+          a.currentTime = p.pos;
+          setCurrentTime(p.pos);
+          setResumedFrom(Math.floor(p.pos));
+        }
+      } catch {}
+    };
+    if (isFinite(a.duration) && a.duration > 0) apply();
+    else a.addEventListener("loadedmetadata", apply, { once: true });
+  }, []);
+
   const playSessionIndex = useCallback(async (idx: number) => {
     const sess = sessionRef.current;
     if (!sess.length) return;
@@ -143,6 +192,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     }
     setCurrent({ ...item.meta, streamUrl: item.url });
     setDuration(item.meta.durationSec || 0);
+    pushHistory({ ...item.meta, streamUrl: item.url });
     if (audioRef.current) {
       audioRef.current.src = item.url;
       audioRef.current.currentTime = 0;
@@ -177,6 +227,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
       sourceId: saved.sourceId ?? undefined,
       streamUrl: null,
     });
+    pushHistory(savedToNowPlaying(saved));
     setDuration(saved.durationSec || 0);
     try {
       await audioRef.current?.play();
@@ -191,6 +242,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
         setResumedFrom(Math.floor(pos));
       }
     } catch {}
+    consumePendingPos();
     await db.tracks.update(id, { playCount: (saved.playCount || 0) + 1, lastPlayedAt: Date.now() }).catch(() => {});
     setMediaMeta(saved.title, saved.artist);
     // upNext = saved metas after current within queueRef.
@@ -207,7 +259,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
         }
       }
     } catch {}
-  }, []);
+  }, [pushHistory, consumePendingPos]);
 
   const step = useCallback(
     async (dir: 1 | -1) => {
@@ -255,6 +307,24 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     try {
       setOfflineModeState(loadSettings().offlineMode);
     } catch {}
+    // Restore last session (track + position) so reopening resumes.
+    try {
+      const raw = localStorage.getItem(STATE_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw) as { meta?: NowPlaying; position?: number };
+        if (parsed?.meta?.id) {
+          setCurrent(parsed.meta);
+          setDuration(parsed.meta.durationSec || 0);
+          const pos = Math.floor(parsed.position || 0);
+          if (pos > 10) {
+            pendingRef.current = { id: parsed.meta.id, pos };
+            setResumedFrom(pos);
+          }
+        }
+      }
+    } catch {}
+    const onHide = () => persistNow();
+    window.addEventListener("pagehide", onHide);
     const onTime = () => {
       setCurrentTime(a.currentTime || 0);
       // Remember podcast position (throttled) so episodes resume later.
@@ -270,12 +340,18 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
           lastPosSaveRef.current = now;
           db.tracks.update(cur.id, { lastPosition: Math.floor(a.currentTime) }).catch(() => {});
         }
+        // Persist session (track + position) for reopen restores.
+        if (cur && now - lastPersistRef.current > 15000) {
+          lastPersistRef.current = now;
+          persistNow();
+        }
       } catch {}
     };
     const onDur = () => setDuration(a.duration || 0);
     const onPlay = () => setPlaying(true);
     const onPause = () => {
       setPlaying(false);
+      persistNow();
       // Final position save for podcasts.
       try {
         const cur = currentRef.current;
@@ -354,6 +430,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     } catch {}
     return () => {
       a.pause();
+      window.removeEventListener("pagehide", onHide);
       a.removeEventListener("timeupdate", onTime);
       a.removeEventListener("loadedmetadata", onDur);
       a.removeEventListener("play", onPlay);
@@ -395,6 +472,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
       setCurrent({ ...meta, streamUrl: url });
       setDuration(meta.durationSec || 0);
       setResumedFrom(null);
+      pushHistory({ ...meta, streamUrl: url });
       if (audioRef.current) {
         audioRef.current.src = url;
         audioRef.current.currentTime = 0;
@@ -402,10 +480,11 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
       try {
         await audioRef.current?.play();
       } catch {}
+      consumePendingPos();
       setUpNext(items.slice(idx + 1).map((s) => ({ ...s.meta, streamUrl: s.url })));
       setMediaMeta(meta.title, meta.artist);
     },
-    []
+    [pushHistory, consumePendingPos]
   );
 
   const toggle = useCallback(async () => {
@@ -413,6 +492,30 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     if (!a) return;
     if (a.paused) {
       if (!a.src) {
+        // Cold start (e.g. restored session): load current if we have one.
+        const cur = currentRef.current;
+        if (cur) {
+          try {
+            const saved = await db.tracks.get(cur.id).catch(() => undefined);
+            if (saved) {
+              if (urlRef.current) URL.revokeObjectURL(urlRef.current);
+              const url = URL.createObjectURL(saved.blob);
+              urlRef.current = url;
+              a.src = url;
+              a.currentTime = 0;
+            } else if (cur.streamUrl) {
+              a.src = cur.streamUrl;
+              a.currentTime = 0;
+            } else {
+              return;
+            }
+            consumePendingPos();
+            await a.play().catch(() => {});
+            return;
+          } catch {
+            return;
+          }
+        }
         const ids = queueRef.current.length ? queueRef.current : await orderedIds();
         if (!ids.length) return;
         queueRef.current = ids;
@@ -423,7 +526,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     } else {
       a.pause();
     }
-  }, [playId]);
+  }, [playId, consumePendingPos]);
 
   const seek = useCallback((sec: number) => {
     const a = audioRef.current;
@@ -524,6 +627,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
       shuffle,
       repeatMode,
       upNext,
+      history,
       resumedFrom,
       play,
       playList,
@@ -537,7 +641,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
       cycleRepeat,
       saveCurrent,
     }),
-    [current, playing, currentTime, duration, offlineMode, shuffle, repeatMode, upNext, resumedFrom, play, playList, preview, toggle, seek, step, setOfflineMode, toggleShuffle, cycleRepeat, saveCurrent]
+    [current, playing, currentTime, duration, offlineMode, shuffle, repeatMode, upNext, history, resumedFrom, play, playList, preview, toggle, seek, step, setOfflineMode, toggleShuffle, cycleRepeat, saveCurrent]
   );
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;

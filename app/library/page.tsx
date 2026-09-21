@@ -3,10 +3,11 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { BottomNav, Icon, MiniPlayer, TopBar } from "../components/Nav";
-import { db, listPlaylists, listTracks, type Playlist, type SavedTrack } from "../../lib/db";
+import { db, listPlaylists, listTracks, recentTracks, type Playlist, type SavedTrack } from "../../lib/db";
 import { usePlayer } from "../../lib/player-context";
+import { fmtTime } from "../../lib/catalog";
 
-const TABS = ["Playlists", "Saved"];
+const TABS = ["Playlists", "Saved", "Recent"];
 
 let lastTab = 0;
 
@@ -19,6 +20,7 @@ export default function LibraryPage() {
   };
   const [playlists, setPlaylists] = useState<Playlist[]>([]);
   const [saved, setSaved] = useState<SavedTrack[]>([]);
+  const [recent, setRecent] = useState<SavedTrack[]>([]);
 
   const refresh = useCallback(async () => {
     try {
@@ -26,6 +28,9 @@ export default function LibraryPage() {
     } catch {}
     try {
       setSaved(await listTracks());
+    } catch {}
+    try {
+      setRecent(await recentTracks(15));
     } catch {}
   }, []);
 
@@ -83,7 +88,9 @@ export default function LibraryPage() {
               ))
             )}
           </div>
-        ) : saved.length === 0 ? (
+        ) : (
+          tab === 1 ? (
+          saved.length === 0 ? (
           <div className="w-full t-card p-6 rounded-2xl clay-card flex flex-col items-center text-center mt-2">
             <div className="w-14 h-14 rounded-full t-primary-ct clay-thumb flex items-center justify-center mb-2">
               <Icon name="cloud" fill className="text-[28px]" />
@@ -116,7 +123,42 @@ export default function LibraryPage() {
               );
             })}
           </div>
-        )}
+          )
+        ) : recent.length === 0 ? (
+          <div className="w-full t-card p-6 rounded-2xl clay-card flex flex-col items-center text-center mt-2">
+            <div className="w-14 h-14 rounded-full t-primary-ct clay-thumb flex items-center justify-center mb-2">
+              <Icon name="history" className="text-[28px]" />
+            </div>
+            <p className="font-display font-bold text-[16px]">No recents yet</p>
+            <p className="text-[13px] t-muted mt-1">Play anything and it will show up here.</p>
+          </div>
+        ) : (
+          <div className="flex flex-col gap-3 mt-2">
+            {recent.map((t) => {
+              const isCurrent = current?.id === t.id && playing;
+              const isPod = (t.kind ?? "music") === "podcast";
+              return (
+                <button key={t.id} onClick={() => play(t.id)} className="w-full t-card p-3 rounded-2xl clay-card flex items-center justify-between gap-2 text-left">
+                  <div className="flex items-center gap-3 min-w-0 flex-1">
+                    <div className="w-12 h-12 rounded-2xl clay-thumb flex items-center justify-center shrink-0" style={{ background: t.bg }}>
+                      <Icon name={isPod ? "podcasts" : t.icon} className="text-[24px]" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="font-display font-bold text-[15px] truncate">{t.title}</p>
+                      <p className="text-[12px] t-muted truncate">
+                        {isPod ? "Podcast" : "Music"} • {t.artist}
+                        {t.durationSec ? ` • ${fmtTime(t.durationSec)}` : ""}
+                      </p>
+                    </div>
+                  </div>
+                  <span className="w-10 h-10 rounded-full t-primary-ct clay-thumb flex items-center justify-center shrink-0">
+                    <Icon name={isCurrent ? "pause" : "play_arrow"} fill className="text-[20px]" />
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        ))}
       </main>
       <MiniPlayer />
       <BottomNav active="library" />

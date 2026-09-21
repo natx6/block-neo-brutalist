@@ -3,7 +3,7 @@
 import { Suspense, useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { Icon } from "../components/Nav";
+import { Icon, MiniPlayer } from "../components/Nav";
 import { fmtTime } from "../../lib/catalog";
 import { listTracks } from "../../lib/db";
 import { loadSettings, savePodcastEp } from "../../lib/downloads";
@@ -23,7 +23,7 @@ function shortDate(iso: string): string {
 function PodcastContent() {
   const params = useSearchParams();
   const id = params.get("id") || "";
-  const { current, playing, preview, toggle } = usePlayer();
+  const { current, playing, preview } = usePlayer();
   const [show, setShow] = useState<PodcastShow | null>(null);
   const [episodes, setEpisodes] = useState<PodcastEp[]>([]);
   const [loading, setLoading] = useState(true);
@@ -95,23 +95,6 @@ function PodcastContent() {
       .map((e) => ({ meta: podMeta(s, e), url: e.audioUrl }));
   }
 
-  const handlePreview = async (ep: PodcastEp, list: PodcastEp[]) => {
-    if (!show || previewingId) return;
-    const key = `pod-${ep.id}`;
-    if (current?.id === key) {
-      await toggle();
-      return;
-    }
-    setPreviewingId(key);
-    try {
-      const queue = queueFrom(list, show);
-      await preview(podMeta(show, ep), ep.audioUrl, queue.length > 1 ? queue : undefined);
-    } catch {}
-    finally {
-      setPreviewingId(null);
-    }
-  };
-
   const handleSave = async (ep: PodcastEp) => {
     if (!show) return;
     const key = `pod-${ep.id}`;
@@ -154,7 +137,7 @@ function PodcastContent() {
         </div>
       </header>
 
-      <main className="flex-1 min-h-0 pt-[calc(4rem+env(safe-area-inset-top))] pb-10 px-5 flex flex-col gap-4 overflow-y-auto overscroll-contain">
+      <main className="flex-1 min-h-0 pt-[calc(4rem+env(safe-area-inset-top))] pb-32 px-5 flex flex-col gap-4 overflow-y-auto overscroll-contain">
         <div className="pt-3" />
         {loading ? (
           <div className="w-full t-card p-6 rounded-2xl clay-card flex flex-col items-center text-center gap-3">
@@ -175,21 +158,21 @@ function PodcastContent() {
           </div>
         ) : (
           <>
-            <div className="w-full t-card rounded-[28px] p-5 clay-card flex flex-col items-center text-center gap-3">
+            <div className="w-full t-card rounded-[28px] p-4 clay-card flex flex-col items-center text-center gap-2">
               {show.artwork && !artFailed ? (
                 <img
                   src={show.artwork}
                   alt=""
-                  className="w-full max-w-[260px] aspect-square rounded-[22px] object-cover clay-thumb"
+                  className="w-full max-w-[180px] aspect-square rounded-[18px] object-cover clay-thumb"
                   onError={() => setArtFailed(true)}
                 />
               ) : (
-                <div className="w-full max-w-[260px] aspect-square rounded-[22px] t-container clay-thumb flex items-center justify-center">
-                  <Icon name="podcasts" fill className="text-[72px]" />
+                <div className="w-full max-w-[180px] aspect-square rounded-[18px] t-container clay-thumb flex items-center justify-center">
+                  <Icon name="podcasts" fill className="text-[56px]" />
                 </div>
               )}
               <div>
-                <h2 className="font-display font-bold text-[22px] leading-tight">{show.title}</h2>
+                <h2 className="font-display font-bold text-[20px] leading-tight">{show.title}</h2>
                 <p className="font-bold text-[14px] t-muted mt-0.5">{show.artist}</p>
                 {show.genre ? (
                   <span className="inline-block mt-2 px-3 py-1 rounded-full t-primary-ct font-display font-bold text-[11px] uppercase tracking-wide">
@@ -228,10 +211,12 @@ function PodcastContent() {
                   return (
                     <div
                       key={ep.id}
-                      onClick={() => handlePreview(ep, episodes)}
-                      className="w-full t-card p-3 rounded-2xl clay-card flex items-center justify-between gap-2 text-left cursor-pointer"
+                      className="w-full t-card p-3 rounded-2xl clay-card flex items-center justify-between gap-2 text-left"
                     >
-                      <div className="min-w-0 flex-1">
+                      <Link
+                        href={`/episode?show=${encodeURIComponent(show.id)}&ep=${encodeURIComponent(ep.id)}`}
+                        className="min-w-0 flex-1"
+                      >
                         <p className="font-display font-bold text-[14px]">{ep.title}</p>
                         <p className="text-[12px] t-muted">
                           {isPreviewing
@@ -241,7 +226,7 @@ function PodcastContent() {
                         {ep.description ? (
                           <p className="text-[11px] t-muted truncate mt-0.5">{ep.description.slice(0, 300)}</p>
                         ) : null}
-                      </div>
+                      </Link>
                       {isSaved ? (
                         <span aria-label="Saved" className="w-11 h-11 rounded-full bg-[#c7f5dc] clay-thumb flex items-center justify-center shrink-0 text-[#144d32]">
                           <Icon name="check" />
@@ -292,6 +277,7 @@ function PodcastContent() {
           </>
         )}
       </main>
+      <MiniPlayer />
     </div>
   );
 }

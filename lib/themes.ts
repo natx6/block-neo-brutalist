@@ -20,6 +20,10 @@ export const THEMES: Theme[] = [
   { id: "indigo", name: "Indigo Dusk", desc: "Dark electric indigo", swatches: ["#141222", "#8f9bff", "#67e8f9"], icon: iconFor("indigo") },
   { id: "forest", name: "Forest Night", desc: "Dark moss glow", swatches: ["#101b14", "#9be15d", "#7dd3c0"], icon: iconFor("forest") },
   { id: "zine", name: "Indie Zine", desc: "Photocopy paper ink", swatches: ["#f4f1e8", "#1c1a17", "#d43d2a"], icon: iconFor("zine") },
+  { id: "bloodmoon", name: "Blood Moon", desc: "Blackout red ritual", swatches: ["#0d0507", "#ff4d5e", "#e8a06a"], icon: iconFor("bloodmoon") },
+  { id: "neonnoir", name: "Neon Noir", desc: "Acid lime after dark", swatches: ["#101014", "#c8ff3d", "#5eead4"], icon: iconFor("neonnoir") },
+  { id: "burgundy", name: "Burgundy", desc: "Dark wine romance", swatches: ["#1d0f16", "#e88bb0", "#d9a85e"], icon: iconFor("burgundy") },
+  { id: "graphite", name: "Graphite", desc: "Smoked amber steel", swatches: ["#16181d", "#ffb020", "#6db3ff"], icon: iconFor("graphite") },
 ];
 
 const KEY = "puff-theme";
