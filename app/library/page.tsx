@@ -51,7 +51,7 @@ export default function LibraryPage() {
   return (
     <div className="t-bg h-dvh w-full flex flex-col relative overflow-hidden">
       <TopBar title="Library" />
-      <main className="flex-1 min-h-0 w-full max-w-[430px] mx-auto pt-[calc(4rem+env(safe-area-inset-top))] pb-[144px] px-5 overflow-y-auto overscroll-contain">
+      <main className="flex-1 min-h-0 w-full max-w-[430px] mx-auto pt-[calc(4rem+env(safe-area-inset-top))] pb-[140px] px-5 overflow-y-auto overscroll-contain">
         <div className="flex gap-2 justify-center overflow-x-auto no-scrollbar py-3">
           {TABS.map((t, i) => (
             <button
