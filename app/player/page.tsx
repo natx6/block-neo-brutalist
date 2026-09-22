@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Icon } from "../components/Nav";
@@ -24,7 +24,6 @@ export default function PlayerPage() {
     repeatMode,
     cycleRepeat,
     saveCurrent,
-    resumedFrom,
   } = usePlayer();
   const [liked, setLiked] = useState(false);
   const [artFailed, setArtFailed] = useState(false);
@@ -45,7 +44,33 @@ export default function PlayerPage() {
 
   const isStash = current?.source === "stash";
   const isSaved = isStash || savedDone;
-  const sourceLabel = !current ? "No source" : isStash ? "Saved offline" : "Preview";
+
+  const trackRef = useRef<HTMLDivElement>(null);
+  const draggingRef = useRef(false);
+
+  const seekFromClientX = (clientX: number) => {
+    const el = trackRef.current;
+    if (!el || !duration) return;
+    const r = el.getBoundingClientRect();
+    const frac = Math.max(0, Math.min(1, (clientX - r.left) / r.width));
+    seek(frac * duration);
+  };
+
+  const onTrackPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    draggingRef.current = true;
+    try {
+      e.currentTarget.setPointerCapture(e.pointerId);
+    } catch {}
+    seekFromClientX(e.clientX);
+  };
+
+  const onTrackPointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (draggingRef.current) seekFromClientX(e.clientX);
+  };
+
+  const endTrackDrag = () => {
+    draggingRef.current = false;
+  };
 
   useEffect(() => {
     setArtFailed(false);
@@ -97,12 +122,6 @@ export default function PlayerPage() {
     const t = setTimeout(() => setShareMsg(null), 1600);
     return () => clearTimeout(t);
   }, [shareMsg]);
-
-  const handleSeek = (e: React.MouseEvent<HTMLDivElement>) => {
-    const r = e.currentTarget.getBoundingClientRect();
-    const frac = Math.max(0, Math.min(1, (e.clientX - r.left) / r.width));
-    seek(frac * duration);
-  };
 
   const handleSave = async () => {
     if (!current || isSaved || savePct !== null) return;
@@ -254,23 +273,24 @@ export default function PlayerPage() {
               </button>
             </div>
 
-            <div className="flex flex-col gap-2 mb-3 shrink-0">
-              <div className="relative w-full h-8 flex items-center cursor-pointer" onClick={handleSeek}>
+            <div className="flex flex-col gap-2 mb-3 shrink-0 mx-5">
+              <div
+                ref={trackRef}
+                className="relative w-full h-10 flex items-center cursor-pointer touch-none select-none"
+                onPointerDown={onTrackPointerDown}
+                onPointerMove={onTrackPointerMove}
+                onPointerUp={endTrackDrag}
+                onPointerCancel={endTrackDrag}
+              >
                 <div className="w-full h-3 rounded-full t-variant shadow-[inset_2px_2px_4px_rgba(74,59,92,0.14)] p-[2px]">
                   <div className="h-full rounded-full bg-gradient-to-r from-[var(--secondary-ct)] via-[var(--primary-ct)] to-[var(--primary)]" style={{ width: `${pct}%` }} />
                 </div>
-                <div className="absolute w-6 h-6 rounded-full t-card clay-thumb flex items-center justify-center" style={{ left: `${pct}%`, transform: "translateX(-50%)" }}>
+                <div className="absolute w-7 h-7 rounded-full t-card clay-thumb flex items-center justify-center pointer-events-none" style={{ left: `${pct}%`, transform: "translateX(-50%)" }}>
                   <div className="w-2.5 h-2.5 rounded-full bg-[var(--primary)]" />
                 </div>
               </div>
               <div className="flex justify-between items-center px-1">
                 <span className="font-display font-bold text-[11px]">{fmtTime(currentTime)}</span>
-                <span className="px-2 py-0.5 rounded-full t-container text-[11px] font-bold">{sourceLabel}</span>
-                {resumedFrom !== null && resumedFrom > 0 && (
-                  <span className="px-2 py-0.5 rounded-full t-secondary-ct text-[11px] font-bold">
-                    Resumed {fmtTime(resumedFrom)}
-                  </span>
-                )}
                 <span className="font-display font-bold text-[11px]">{fmtTime(duration)}</span>
               </div>
             </div>
