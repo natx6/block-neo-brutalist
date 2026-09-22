@@ -52,6 +52,20 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <PlayerProvider>
           <ApplyTheme />
           {children}
+          {/* Home-indicator zone: always navbar-colored, every page/theme. */}
+          <div
+            aria-hidden
+            style={{
+              position: "fixed",
+              left: 0,
+              right: 0,
+              bottom: 0,
+              height: "env(safe-area-inset-bottom, 0px)",
+              background: "var(--card)",
+              zIndex: 40,
+              pointerEvents: "none",
+            }}
+          />
         </PlayerProvider>
       </body>
     </html>
