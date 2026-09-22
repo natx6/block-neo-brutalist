@@ -202,7 +202,7 @@ export default function PlayerPage() {
   };
 
   return (
-    <div className={`w-full flex flex-col relative overflow-hidden h-dvh transition-transform duration-300 ease-in ${leaving ? "translate-y-full" : ""}`} style={{ background: "linear-gradient(180deg, var(--bg) 0%, var(--container) 55%, var(--bg) 100%)" }}>
+    <div className={`w-full flex flex-col relative overflow-hidden min-h-dvh transition-transform duration-300 ease-in ${leaving ? "translate-y-full" : ""}`} style={{ background: "linear-gradient(180deg, var(--bg) 0%, var(--container) 55%, var(--bg) 100%)" }}>
       {/* Edge-to-edge animated backdrop — drifts while playing, still when paused */}
       <div className="fixed inset-0 pointer-events-none" aria-hidden>
         <div
@@ -229,11 +229,11 @@ export default function PlayerPage() {
         </div>
       </header>
 
-      <main className="w-full max-w-[430px] mx-auto flex-1 min-h-0 pt-[calc(4rem+env(safe-area-inset-top))] pb-3 px-5 flex flex-col overflow-hidden relative z-10">
+      <main className="w-full max-w-[430px] mx-auto flex-1 min-h-0 pt-[calc(4rem+env(safe-area-inset-top))] pb-[calc(0.75rem+env(safe-area-inset-bottom,0px))] px-5 flex flex-col overflow-hidden relative z-10">
 
         {!current ? (
           <div className="flex flex-col items-center text-center pt-4">
-            <div className="w-[min(84vw,340px,38dvh)] aspect-square rounded-[18px] overflow-hidden flex items-center justify-center shrink-0 t-primary-ct">
+            <div className="w-[min(100%,38dvh)] aspect-square rounded-[18px] overflow-hidden flex items-center justify-center shrink-0 t-primary-ct">
               <Icon name="cloud" className="text-[72px]" fill />
             </div>
             <h2 className="font-display font-bold text-[22px] mt-6">Nothing playing</h2>
@@ -246,7 +246,7 @@ export default function PlayerPage() {
         ) : (
           <>
             <div className="flex justify-center pt-1 pb-2 shrink-0">
-              <div className="relative w-[min(84vw,340px,38dvh)] aspect-square rounded-[18px] overflow-hidden flex items-center justify-center" style={{ background: current.bg }}>
+              <div className="relative w-[min(100%,38dvh)] aspect-square rounded-[18px] overflow-hidden flex items-center justify-center" style={{ background: current.bg }}>
                 {current.artwork && !artFailed ? (
                   <img
                     src={current.artwork}
@@ -273,7 +273,7 @@ export default function PlayerPage() {
               </button>
             </div>
 
-            <div className="flex flex-col gap-2 mb-3 shrink-0 mx-5">
+            <div className="flex flex-col gap-2 mb-3 shrink-0">
               <div
                 ref={trackRef}
                 className="relative w-full h-10 flex items-center cursor-pointer touch-none select-none"

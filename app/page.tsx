@@ -6,7 +6,6 @@ import { BottomNav, MiniPlayer, Icon } from "./components/Nav";
 import AppIcon from "./components/AppIcon";
 import { getTrack, listTracks, recentTracks, type SavedTrack } from "../lib/db";
 import { loadSettings, saveFileTracks, saveSaavnTrack } from "../lib/downloads";
-import { fetchCharts, GENRES, type ChartSong } from "../lib/charts";
 import { searchSaavn, streamUrl, type SaavnResult } from "../lib/saavn";
 import { usePlayer } from "../lib/player-context";
 
@@ -17,10 +16,6 @@ const MOODS = [
   { title: "Dreamy", sub: "Bedtime melodies", bg: "bg-[#E2D4FF]", dot: "bg-[#CFBCFA]", text: "text-[#352561]", subText: "text-[#4A387E]", icon: "bedtime", href: "/search?q=sleep%20sounds" },
 ];
 
-function chartKey(c: ChartSong) {
-  return `${c.title}|${c.artist}`;
-}
-
 export default function Home() {
   const [recent, setRecent] = useState<SavedTrack[]>([]);
   const [artFail, setArtFail] = useState<Set<string>>(new Set());
@@ -28,13 +23,6 @@ export default function Home() {
   const fileRef = useRef<HTMLInputElement>(null);
   const { current, playing, play, preview, toggle, history } = usePlayer();
 
-  const [genre, setGenre] = useState("");
-  const [charts, setCharts] = useState<ChartSong[]>([]);
-  const [chartsLoading, setChartsLoading] = useState(false);
-  const [chartArtFail, setChartArtFail] = useState<Set<string>>(new Set());
-  const [matchingId, setMatchingId] = useState<string | null>(null);
-  const [unplayable, setUnplayable] = useState<Set<string>>(new Set());
-  const matchCache = useRef(new Map<string, SaavnResult>());
   const [savedIds, setSavedIds] = useState<Set<string>>(new Set());
   const [dlProg, setDlProg] = useState<Record<string, number>>({});
   const [moreArtists, setMoreArtists] = useState<string[]>([]);
@@ -103,17 +91,6 @@ export default function Home() {
           streamUrl: null as string | null,
         }));
 
-  const fetchChartSongs = useCallback(async (g: string) => {
-    setChartsLoading(true);
-    try {
-      setCharts(await fetchCharts(g, 15));
-    } catch {
-      setCharts([]);
-    } finally {
-      setChartsLoading(false);
-    }
-  }, []);
-
   const fetchMore = useCallback(async () => {
     let tracks: SavedTrack[] = [];
     try {
@@ -163,70 +140,14 @@ export default function Home() {
 
   useEffect(() => {
     refresh();
-    fetchChartSongs(genre);
     fetchMore();
     const onFocus = () => {
       refresh();
-      fetchChartSongs(genre);
       fetchMore();
     };
     window.addEventListener("focus", onFocus);
     return () => window.removeEventListener("focus", onFocus);
-  }, [refresh, fetchChartSongs, fetchMore, genre]);
-
-  const matchChart = useCallback(async (c: ChartSong): Promise<SaavnResult | null> => {
-    const key = chartKey(c);
-    const cached = matchCache.current.get(key);
-    if (cached) return cached;
-    setMatchingId(key);
-    try {
-      const res = await searchSaavn(`${c.title} ${c.artist}`, 5);
-      const m = res[0] ?? null;
-      if (m) {
-        matchCache.current.set(key, m);
-        return m;
-      }
-      setUnplayable((prev) => new Set(prev).add(key));
-      return null;
-    } catch {
-      setUnplayable((prev) => new Set(prev).add(key));
-      return null;
-    } finally {
-      setMatchingId(null);
-    }
-  }, []);
-
-  const handlePreviewChart = async (c: ChartSong) => {
-    const key = chartKey(c);
-    if (matchingId) return;
-    let m = matchCache.current.get(key);
-    if (!m) {
-      m = (await matchChart(c)) ?? undefined;
-      if (!m) return;
-    }
-    const id = `saavn-${m.id}`;
-    if (current?.id === id) {
-      await toggle();
-      return;
-    }
-    try {
-      await preview(
-        {
-          id,
-          title: m.title,
-          artist: m.artist,
-          durationSec: m.durationSec,
-          icon: "music_note",
-          bg: "#FFE0D6",
-          artwork: m.artwork,
-          album: m.album,
-          source: "saavn",
-          sourceId: m.id,
-        },
-        streamUrl(m, loadSettings().quality)
-      );
-    } catch {}
-  };
+  }, [refresh, fetchMore]);
 
   const handlePreviewSaavn = async (r: SaavnResult) => {
     const id = `saavn-${r.id}`;
@@ -273,17 +194,6 @@ export default function Home() {
     });
   };
 
-  const handleSaveChart = async (c: ChartSong) => {
-    const key = chartKey(c);
-    let m = matchCache.current.get(key);
-    if (!m) {
-      if (matchingId) return;
-      m = (await matchChart(c)) ?? undefined;
-      if (!m) return;
-    }
-    await handleSaveSaavn(m);
-  };
-
   return (
     <div className="t-bg h-dvh max-w-[430px] mx-auto flex flex-col relative overflow-hidden">
       <header className="fixed top-0 inset-x-0 z-50 pt-safe t-bg">
@@ -303,127 +213,6 @@ export default function Home() {
       <main className="flex-1 min-h-0 pt-[calc(4rem+env(safe-area-inset-top))] pb-[144px] overflow-y-auto overscroll-contain">
         <div className="px-5 pt-3">
           <p className="font-display font-bold text-[18px]">{greeting}</p>
-        </div>
-
-        <div className="mt-4">
-          <div className="px-5 flex items-center justify-between mb-2">
-            <p className="font-display font-bold text-[22px]">Trending now</p>
-          </div>
-          <div className="flex gap-2 overflow-x-auto px-5 pb-3 no-scrollbar">
-            {GENRES.map((g) => {
-              const active = genre === g.id;
-              return (
-                <button
-                  key={g.label}
-                  onClick={() => setGenre(g.id)}
-                  className={`h-9 px-4 rounded-full font-display font-bold text-[13px] shrink-0 min-h-[36px] ${
-                    active ? "t-primary clay-button-active" : "t-card clay-card"
-                  }`}
-                >
-                  {g.label}
-                </button>
-              );
-            })}
-          </div>
-          {chartsLoading && charts.length === 0 ? (
-            <p className="text-[13px] font-bold t-muted px-5">Catching today&apos;s hits...</p>
-          ) : charts.length === 0 ? (
-            <p className="text-[13px] font-bold t-muted px-5">Nothing trending right now.</p>
-          ) : (
-            <div className="flex gap-4 overflow-x-auto px-5 pb-3 pt-1 no-scrollbar">
-              {charts.map((c) => {
-                const key = chartKey(c);
-                const m = matchCache.current.get(key);
-                const savedKey = m ? `saavn-${m.id}` : null;
-                const isCurrent = !!(savedKey && current?.id === savedKey && playing);
-                const showArt = !!c.artwork && !chartArtFail.has(key);
-                const isSaved = !!(savedKey && savedIds.has(savedKey));
-                const prog = savedKey ? dlProg[savedKey] : undefined;
-                const isDownloading = prog !== undefined;
-                const isMatching = matchingId === key;
-                const notAvailable = unplayable.has(key);
-                return (
-                  <div key={key} className="flex flex-col gap-2 shrink-0 w-[140px] text-left">
-                    <div className="relative w-[140px] h-[140px] rounded-[28px] p-2 clay-card t-card flex items-center justify-center">
-                      <button
-                        onClick={() => handlePreviewChart(c)}
-                        aria-label={`Play ${c.title}`}
-                        className="w-full h-full rounded-[20px] overflow-hidden relative"
-                      >
-                        {showArt ? (
-                          <img
-                            src={c.artwork as string}
-                            alt=""
-                            className="w-full h-full rounded-[20px] object-cover"
-                            onError={() => setChartArtFail((prev) => new Set(prev).add(key))}
-                          />
-                        ) : (
-                          <div className="w-full h-full rounded-[20px] bg-white/70 flex items-center justify-center text-[#4c3f70]">
-                            <Icon name="music_note" fill className="text-[56px]" />
-                          </div>
-                        )}
-                        {isMatching && (
-                          <span className="absolute inset-0 rounded-[20px] bg-white/70 flex items-center justify-center">
-                            <span className="w-6 h-6 rounded-full border-2 border-[var(--primary)] border-t-transparent animate-spin" />
-                          </span>
-                        )}
-                      </button>
-                      <button
-                        onClick={() => handlePreviewChart(c)}
-                        aria-label={isCurrent ? `Pause ${c.title}` : `Play ${c.title}`}
-                        className="absolute bottom-3 right-3 w-9 h-9 rounded-full t-primary clay-thumb flex items-center justify-center"
-                      >
-                        <Icon name={isCurrent ? "pause" : "play_arrow"} fill className="text-[20px]" />
-                      </button>
-                      {isSaved ? (
-                        <span aria-label="Saved" className="absolute top-3 right-3 w-8 h-8 rounded-full bg-[#c7f5dc] clay-thumb flex items-center justify-center text-[#144d32]">
-                          <Icon name="check" className="text-[18px]" />
-                        </span>
-                      ) : isDownloading ? (
-                        <span className="absolute top-3 right-3 w-8 h-8 rounded-full t-container clay-thumb flex items-center justify-center">
-                          <svg className="w-8 h-8 -rotate-90" viewBox="0 0 44 44">
-                            <circle cx="22" cy="22" r="17" stroke="#eedbff" strokeWidth="4" fill="none" />
-                            <circle
-                              cx="22"
-                              cy="22"
-                              r="17"
-                              stroke="#306385"
-                              strokeWidth="4"
-                              fill="none"
-                              strokeDasharray="106.8"
-                              strokeDashoffset={106.8 * (1 - (prog ?? 0) / 100)}
-                              strokeLinecap="round"
-                            />
-                          </svg>
-                          <span className="absolute text-[8px] font-bold">{prog}%</span>
-                        </span>
-                      ) : (
-                        <button
-                          onClick={() => handleSaveChart(c)}
-                          aria-label={`Download ${c.title}`}
-                          className="absolute top-3 right-3 w-8 h-8 rounded-full t-card clay-thumb flex items-center justify-center"
-                        >
-                          <Icon name="download" className="text-[18px]" />
-                        </button>
-                      )}
-                    </div>
-                    <button onClick={() => handlePreviewChart(c)} className="px-1 text-left">
-                      <p className="font-display font-bold text-[14px] truncate">{c.title}</p>
-                      <p className="text-[12px] t-muted truncate">
-                        {isMatching ? "Matching..." : c.artist}
-                      </p>
-                      {notAvailable && (
-                        <p className="text-[11px] font-bold t-muted">Not available to stream</p>
-                      )}
-                    </button>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-          {chartsLoading && charts.length > 0 && (
-            <p className="text-[12px] font-bold t-muted px-5 pb-1">Catching today&apos;s hits...</p>
-          )}
         </div>
 
         {moreArtists.length > 0 && (
@@ -518,7 +307,7 @@ export default function Home() {
           </div>
           {recentRows.length === 0 ? (
             <div className="px-5">
-              <div className="w-full t-card p-6 rounded-2xl clay-card flex flex-col items-center text-center">
+              <div className="w-full py-8 flex flex-col items-center text-center">
                 <div className="w-14 h-14 rounded-full t-primary-ct clay-thumb flex items-center justify-center mb-2">
                   <Icon name="cloud" fill className="text-[28px]" />
                 </div>

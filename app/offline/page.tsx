@@ -225,7 +225,7 @@ export default function OfflinePage() {
         </div>
 
         {tracks.length === 0 ? (
-          <div className="w-full t-card p-6 rounded-2xl clay-card flex flex-col items-center text-center">
+          <div className="w-full py-8 flex flex-col items-center text-center">
             <p className="font-display font-bold text-[16px]">No tunes yet — add from Search.</p>
             <Link href="/search" className="mt-3 h-11 px-6 rounded-full t-primary font-display font-bold text-[14px] clay-button-active flex items-center min-h-[44px]">
               Go to Search

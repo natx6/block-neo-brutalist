@@ -322,7 +322,7 @@ export default function SearchPage() {
         {mode === "podcasts" ? (
           <>
             {!showingResults ? (
-              <div className="w-full t-card p-6 rounded-2xl clay-card flex flex-col items-center text-center">
+              <div className="w-full py-8 flex flex-col items-center text-center">
                 <div className="w-14 h-14 rounded-full t-primary-ct clay-thumb flex items-center justify-center mb-2">
                   <Icon name="podcasts" fill className="text-[28px]" />
                 </div>
@@ -330,7 +330,7 @@ export default function SearchPage() {
                 <p className="text-[14px] t-muted max-w-[280px]">Search above for podcasts. Saved episodes live in Offline.</p>
               </div>
             ) : podSearching ? (
-              <div className="w-full t-card p-6 rounded-2xl clay-card flex flex-col items-center text-center gap-3">
+              <div className="w-full py-8 flex flex-col items-center text-center gap-3">
                 <div className="flex items-center gap-2">
                   <span className="w-3.5 h-3.5 rounded-full t-primary-ct animate-bounce" />
                   <span className="w-3.5 h-3.5 rounded-full t-secondary-ct animate-bounce [animation-delay:150ms]" />
@@ -361,7 +361,7 @@ export default function SearchPage() {
                     Podcasts unavailable right now.
                   </p>
                 ) : podShows.length === 0 ? (
-                  <div className="w-full t-card p-6 rounded-2xl clay-card flex flex-col items-center text-center">
+                  <div className="w-full py-8 flex flex-col items-center text-center">
                     <p className="font-display font-bold text-[18px]">No matches</p>
                     <p className="text-[13px] t-muted">Try a different show or topic.</p>
                   </div>
@@ -379,7 +379,7 @@ export default function SearchPage() {
         ) : showingResults ? (
           <>
             {searching ? (
-              <div className="w-full t-card p-6 rounded-2xl clay-card flex flex-col items-center text-center gap-3">
+              <div className="w-full py-8 flex flex-col items-center text-center gap-3">
                 <div className="flex items-center gap-2">
                   <span className="w-3.5 h-3.5 rounded-full t-primary-ct animate-bounce" />
                   <span className="w-3.5 h-3.5 rounded-full t-secondary-ct animate-bounce [animation-delay:150ms]" />
@@ -435,7 +435,7 @@ export default function SearchPage() {
                     Originals unavailable right now.
                   </p>
                 ) : rankedSaavnResults.length === 0 ? (
-                  <div className="w-full t-card p-6 rounded-2xl clay-card flex flex-col items-center text-center">
+                  <div className="w-full py-8 flex flex-col items-center text-center">
                     <p className="font-display font-bold text-[18px]">No matches</p>
                     <p className="text-[13px] t-muted">Try a different title or artist.</p>
                   </div>
@@ -550,7 +550,7 @@ export default function SearchPage() {
             </div>
 
             {saved.length === 0 ? (
-              <div className="w-full t-card p-6 rounded-2xl clay-card flex flex-col items-center text-center">
+              <div className="w-full py-8 flex flex-col items-center text-center">
                 <div className="w-14 h-14 rounded-full t-primary-ct clay-thumb flex items-center justify-center mb-2">
                   <Icon name="cloud" fill className="text-[28px]" />
                 </div>

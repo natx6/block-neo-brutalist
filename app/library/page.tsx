@@ -91,7 +91,7 @@ export default function LibraryPage() {
         ) : (
           tab === 1 ? (
           saved.length === 0 ? (
-          <div className="w-full t-card p-6 rounded-2xl clay-card flex flex-col items-center text-center mt-2">
+          <div className="w-full py-8 flex flex-col items-center text-center mt-2">
             <div className="w-14 h-14 rounded-full t-primary-ct clay-thumb flex items-center justify-center mb-2">
               <Icon name="cloud" fill className="text-[28px]" />
             </div>
@@ -125,7 +125,7 @@ export default function LibraryPage() {
           </div>
           )
         ) : recent.length === 0 ? (
-          <div className="w-full t-card p-6 rounded-2xl clay-card flex flex-col items-center text-center mt-2">
+          <div className="w-full py-8 flex flex-col items-center text-center mt-2">
             <div className="w-14 h-14 rounded-full t-primary-ct clay-thumb flex items-center justify-center mb-2">
               <Icon name="history" className="text-[28px]" />
             </div>

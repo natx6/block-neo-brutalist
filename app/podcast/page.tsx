@@ -3,7 +3,7 @@
 import { Suspense, useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { Icon, MiniPlayer } from "../components/Nav";
+import { BottomNav, Icon, MiniPlayer } from "../components/Nav";
 import { fmtTime } from "../../lib/catalog";
 import { listTracks } from "../../lib/db";
 import { loadSettings, savePodcastEp } from "../../lib/downloads";
@@ -137,10 +137,10 @@ function PodcastContent() {
         </div>
       </header>
 
-      <main className="flex-1 min-h-0 pt-[calc(4rem+env(safe-area-inset-top))] pb-32 px-5 flex flex-col gap-4 overflow-y-auto overscroll-contain">
+      <main className="flex-1 min-h-0 pt-[calc(4rem+env(safe-area-inset-top))] pb-[150px] px-5 flex flex-col gap-4 overflow-y-auto overscroll-contain">
         <div className="pt-3" />
         {loading ? (
-          <div className="w-full t-card p-6 rounded-2xl clay-card flex flex-col items-center text-center gap-3">
+          <div className="w-full py-8 flex flex-col items-center text-center gap-3">
             <div className="flex items-center gap-2">
               <span className="w-3.5 h-3.5 rounded-full t-primary-ct animate-bounce" />
               <span className="w-3.5 h-3.5 rounded-full t-secondary-ct animate-bounce [animation-delay:150ms]" />
@@ -149,7 +149,7 @@ function PodcastContent() {
             <p className="text-[13px] font-bold t-muted">Loading show...</p>
           </div>
         ) : failed || !show ? (
-          <div className="w-full t-card p-6 rounded-2xl clay-card flex flex-col items-center text-center">
+          <div className="w-full py-8 flex flex-col items-center text-center">
             <p className="font-display font-bold text-[18px]">Show not found</p>
             <p className="text-[13px] t-muted">Try searching again.</p>
             <Link href="/search" className="mt-3 h-11 px-6 rounded-full t-primary font-display font-bold text-[14px] clay-button-active flex items-center min-h-[44px]">
@@ -278,6 +278,7 @@ function PodcastContent() {
         )}
       </main>
       <MiniPlayer />
+      <BottomNav active="search" />
     </div>
   );
 }
