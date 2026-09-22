@@ -367,13 +367,21 @@
   --clay-drop: rgba(0, 0, 0, 0.6);
 }
 
-html, body {
+html {
+  height: 100%;
+  overflow: hidden;
+  overflow-x: clip;
+  overscroll-behavior: none;
+  background: var(--bg);
+}
+
+body {
+  min-height: 100%;
   height: 100%;
   overflow: hidden;
   overflow-x: clip;
   overscroll-behavior: none;
   background: linear-gradient(180deg, var(--bg) 0%, var(--container) 55%, var(--bg) 100%);
-  background-attachment: fixed;
   color: var(--ink);
   font-family: "Nunito Sans", system-ui, sans-serif;
   -webkit-tap-highlight-color: transparent;
