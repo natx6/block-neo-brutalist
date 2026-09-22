@@ -62,7 +62,7 @@ function PlaylistInner() {
   };
 
   return (
-    <div className="t-bg h-dvh max-w-[430px] mx-auto flex flex-col relative overflow-hidden">
+    <div className="t-bg h-dvh w-full flex flex-col relative overflow-hidden">
       <header className="fixed top-0 inset-x-0 z-50 pt-safe t-bg">
         <div className="max-w-[430px] mx-auto h-16 px-5 flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -74,7 +74,7 @@ function PlaylistInner() {
           </div>
         </div>
       </header>
-      <main className="flex-1 min-h-0 pt-[calc(5rem+env(safe-area-inset-top))] pb-10 px-5 flex flex-col gap-4 overflow-y-auto overscroll-contain">
+      <main className="flex-1 min-h-0 w-full max-w-[430px] mx-auto pt-[calc(5rem+env(safe-area-inset-top))] pb-10 px-5 flex flex-col gap-4 overflow-y-auto overscroll-contain">
         <div className="rounded-[28px] bg-gradient-to-br from-[var(--primary-ct)] to-[var(--secondary-ct)] clay-card p-6 flex flex-col items-center text-center">
           <div className="w-32 h-32 rounded-[24px] t-card clay-card flex items-center justify-center">
             <Icon name="cloud" className="text-[64px]" fill />

@@ -49,9 +49,9 @@ export default function LibraryPage() {
   };
 
   return (
-    <div className="t-bg h-dvh max-w-[430px] mx-auto flex flex-col relative overflow-hidden">
+    <div className="t-bg h-dvh w-full flex flex-col relative overflow-hidden">
       <TopBar title="Library" />
-      <main className="flex-1 min-h-0 pt-[calc(4rem+env(safe-area-inset-top))] pb-[144px] px-5 overflow-y-auto overscroll-contain">
+      <main className="flex-1 min-h-0 w-full max-w-[430px] mx-auto pt-[calc(4rem+env(safe-area-inset-top))] pb-[144px] px-5 overflow-y-auto overscroll-contain">
         <div className="flex gap-2 justify-center overflow-x-auto no-scrollbar py-3">
           {TABS.map((t, i) => (
             <button
@@ -97,7 +97,7 @@ export default function LibraryPage() {
             </div>
             <p className="font-display font-bold text-[16px]">Nothing saved yet</p>
             <p className="text-[13px] t-muted mt-1">Import audio and it will live here.</p>
-            <Link href="/search" className="mt-3 h-11 px-6 rounded-full t-primary font-display font-bold text-[14px] clay-button-active flex items-center min-h-[44px]">
+            <Link href="/offline" className="mt-3 h-11 px-6 rounded-full t-primary font-display font-bold text-[14px] clay-button-active flex items-center min-h-[44px]">
               Add music
             </Link>
           </div>

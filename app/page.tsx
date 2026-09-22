@@ -9,13 +9,6 @@ import { loadSettings, saveFileTracks, saveSaavnTrack } from "../lib/downloads";
 import { searchSaavn, streamUrl, type SaavnResult } from "../lib/saavn";
 import { usePlayer } from "../lib/player-context";
 
-const MOODS = [
-  { title: "Happy", sub: "Sun-kissed beats", bg: "bg-[#FFF2B2]", dot: "bg-[#FFE580]", text: "text-[#574400]", subText: "text-[#7A6000]", icon: "sunny", href: "/search?q=feel%20good%20hits" },
-  { title: "Cozy", sub: "Warm hot cocoa", bg: "bg-[#FFD6B8]", dot: "bg-[#FFBE94]", text: "text-[#5A2B0F]", subText: "text-[#7B3F1B]", icon: "coffee", href: "/search?q=cozy%20acoustic" },
-  { title: "Focus", sub: "Gentle flow state", bg: "bg-[#C7F5DC]", dot: "bg-[#A8ECC4]", text: "text-[#144D32]", subText: "text-[#1E6B47]", icon: "spa", href: "/search?q=deep%20focus" },
-  { title: "Dreamy", sub: "Bedtime melodies", bg: "bg-[#E2D4FF]", dot: "bg-[#CFBCFA]", text: "text-[#352561]", subText: "text-[#4A387E]", icon: "bedtime", href: "/search?q=sleep%20sounds" },
-];
-
 export default function Home() {
   const [recent, setRecent] = useState<SavedTrack[]>([]);
   const [artFail, setArtFail] = useState<Set<string>>(new Set());
@@ -195,7 +188,7 @@ export default function Home() {
   };
 
   return (
-    <div className="t-bg h-dvh max-w-[430px] mx-auto flex flex-col relative overflow-hidden">
+    <div className="t-bg h-dvh w-full flex flex-col relative overflow-hidden">
       <header className="fixed top-0 inset-x-0 z-50 pt-safe t-bg">
         <div className="max-w-[430px] mx-auto h-16 px-5 flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -210,7 +203,7 @@ export default function Home() {
         </div>
       </header>
 
-      <main className="flex-1 min-h-0 pt-[calc(4rem+env(safe-area-inset-top))] pb-[144px] overflow-y-auto overscroll-contain">
+      <main className="flex-1 min-h-0 w-full max-w-[430px] mx-auto pt-[calc(4rem+env(safe-area-inset-top))] pb-[144px] overflow-y-auto overscroll-contain">
         <div className="px-5 pt-3">
           <p className="font-display font-bold text-[18px]">{greeting}</p>
         </div>
@@ -369,29 +362,6 @@ export default function Home() {
               })}
             </div>
           )}
-        </div>
-
-        <div className="px-5 mt-6">
-          <div className="flex items-center justify-between mb-2">
-            <p className="font-display font-bold text-[22px]">Moods &amp; Vibes</p>
-            <span className="text-[11px] t-muted font-medium">Pick a feeling</span>
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            {MOODS.map((m) => (
-              <Link key={m.title} href={m.href} className={`${m.bg} h-28 rounded-2xl p-3.5 clay-card flex flex-col justify-between text-left active:scale-95 transition-transform min-h-[112px]`}>
-                <div className="flex items-start justify-between">
-                  <span className={`w-10 h-10 rounded-full ${m.dot} flex items-center justify-center text-[#231534]`}>
-                    <Icon name={m.icon} fill />
-                  </span>
-                  <Icon name="north_east" className="text-[18px] opacity-50" />
-                </div>
-                <div>
-                  <p className={`font-display font-bold text-[18px] ${m.text}`}>{m.title}</p>
-                  <p className={`text-[11px] font-bold ${m.subText}`}>{m.sub}</p>
-                </div>
-              </Link>
-            ))}
-          </div>
         </div>
 
       </main>

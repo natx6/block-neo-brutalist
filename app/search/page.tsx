@@ -282,9 +282,9 @@ export default function SearchPage() {
   }));
 
   return (
-    <div className="t-bg h-dvh max-w-[430px] mx-auto flex flex-col relative overflow-hidden">
+    <div className="t-bg h-dvh w-full flex flex-col relative overflow-hidden">
       <TopBar title="Search" />
-      <main ref={mainRef} className="flex-1 min-h-0 pt-[calc(4rem+env(safe-area-inset-top))] pb-[144px] px-5 flex flex-col gap-4 overflow-y-auto overscroll-contain">
+      <main ref={mainRef} className="flex-1 min-h-0 w-full max-w-[430px] mx-auto pt-[calc(4rem+env(safe-area-inset-top))] pb-[144px] px-5 flex flex-col gap-4 overflow-y-auto overscroll-contain">
         <div className="pt-3">
           <div className="flex items-center w-full h-14 t-card rounded-full px-4 clay-card">
             <span className="t-primary-text mr-2 flex items-center">

@@ -174,7 +174,7 @@ function EpisodeContent() {
   const art = ep?.artwork || show?.artwork;
 
   return (
-    <div className="t-bg h-dvh max-w-[430px] mx-auto flex flex-col relative overflow-hidden">
+    <div className="t-bg h-dvh w-full flex flex-col relative overflow-hidden">
       <header className="fixed top-0 inset-x-0 z-50 pt-safe t-bg">
         <div className="max-w-[430px] mx-auto h-16 px-5 flex items-center gap-2">
           <Link
@@ -188,7 +188,7 @@ function EpisodeContent() {
         </div>
       </header>
 
-      <main className="flex-1 min-h-0 pt-[calc(4rem+env(safe-area-inset-top))] pb-[150px] px-5 flex flex-col gap-4 overflow-y-auto overscroll-contain">
+      <main className="flex-1 min-h-0 w-full max-w-[430px] mx-auto pt-[calc(4rem+env(safe-area-inset-top))] pb-[150px] px-5 flex flex-col gap-4 overflow-y-auto overscroll-contain">
         <div className="pt-3" />
         {loading ? (
           <div className="w-full py-8 flex flex-col items-center text-center gap-3">
@@ -272,7 +272,7 @@ export default function EpisodePage() {
   return (
     <Suspense
       fallback={
-        <div className="t-bg h-dvh max-w-[430px] mx-auto flex flex-col items-center justify-center">
+        <div className="t-bg h-dvh w-full flex flex-col items-center justify-center">
           <p className="font-display font-bold t-muted">Loading episode...</p>
         </div>
       }
